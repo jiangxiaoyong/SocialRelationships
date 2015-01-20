@@ -97,42 +97,46 @@ public class MainFragment extends Fragment {
                 public void onCompleted(Response response)
                 {
 
-                    Log.i(TAG, "Result: " + response.toString());
+                    Log.i(TAG, "Response Result: " + response.toString());
                     // Process the returned response
                     GraphObject graphObject = response.getGraphObject();
-                    FacebookRequestError error = response.getError();
                     if (graphObject != null) {
-                        Log.d(TAG, "GraphObject get data :success");
                         if (graphObject.getProperty("data") != null) {
-                            Log.d(TAG, "found data object");
 
                             // Get the data, parse info to get the key/value info
-
                             JSONObject jsonObject = graphObject
                                     .getInnerJSONObject();
-                            Log.d(TAG, jsonObject.toString());
 
-/*
                             try {
-                                JSONArray array = jsonObject
+                                JSONArray outmostArray = jsonObject
                                         .getJSONArray("data");
-                                Log.d(TAG, array.toString());
+                                Log.d(TAG, "outmostArray" + outmostArray.toString());
 
-                                for(int i = 0; i < array.length(); i++)
+                                for(int i = 0; i < outmostArray.length(); i++)
                                 {
-                                    JSONObject object1 = (JSONObject) array.get(i);
-                                    Log.d(TAG, object1.toString());
-                                    JSONObject object2 = (JSONObject) object1.get("tags");
-                                    Log.d(TAG, object2.toString());
-                                    JSONArray array2 =  object2.getJSONArray("data");
-                                    Log.d(TAG, "tag data" + array2.toString());
+                                    JSONObject obj_of_outmostArray = (JSONObject) outmostArray.get(i);
+                                    Log.d(TAG, "object of outmost array" + obj_of_outmostArray.toString());
+
+                                    JSONObject obj_of_tags = (JSONObject) obj_of_outmostArray.get("tags");
+                                    Log.d(TAG, "object of tags" + obj_of_tags.toString());
+
+                                    JSONArray array_of_tags =  obj_of_tags.getJSONArray("data");
+                                    Log.d(TAG, "tag data" + array_of_tags.toString());
+                                    for(int j = 0; j < array_of_tags.length(); j++)
+                                    {
+                                        JSONObject  object = (JSONObject) array_of_tags.get(j);
+                                        String name = (String) object.get("name");
+                                        Number x = (Number) object.get("x");
+                                        Number y = (Number) object.get("y");
+                                        Log.d(TAG, "specific name and coordinates  " + name  +"  "+ x + "  " + y );
+                                    }
 
                                 }
 
                             } catch (JSONException e) {
                                 e.printStackTrace();
                             }
-*/
+
 
                         }
                     }
