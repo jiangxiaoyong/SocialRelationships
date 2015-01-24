@@ -58,13 +58,13 @@ public class MainFragment extends Fragment {
                              ViewGroup container,
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.main, container, false);
-
+/*
         LoginButton authButton = (LoginButton) view.findViewById(R.id.authButton);
         authButton.setFragment(this);
         authButton.setReadPermissions(Arrays.asList("user_photos"));
 
         userInfoTextView = (TextView) view.findViewById(R.id.userInfoTextView);
-
+*/
 
         return view;
     }
@@ -153,6 +153,7 @@ public class MainFragment extends Fragment {
         }
     }
 
+    //get specific tagged photos
     private Bundle getRequestParameters()
     {
         Bundle parameters = new Bundle(2);
@@ -247,6 +248,8 @@ public class MainFragment extends Fragment {
         StringBuilder string = new StringBuilder("");
         return String.valueOf(string.toString());
     }
+
+
 
 }
 
