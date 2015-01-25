@@ -18,6 +18,8 @@
         android:id="@+id/rowCellTextView"
         android:textSize="30sp"
         android:padding="15dp"
-        android:textColor="#ffffff"/>
+        android:textColor="#ffffff"
+        android:fontFamily="sans-serif-light"
+        />
 
 </LinearLayout>

@@ -61,6 +61,8 @@ public class MainActivity extends FragmentActivity {
                     .findFragmentById(android.R.id.content);
         }
         */
+
+
         uiHelper = new UiLifecycleHelper(this, callback);
         uiHelper.onCreate(savedInstanceState);
 
