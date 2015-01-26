@@ -32,6 +32,7 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -215,7 +216,7 @@ public class ListViewFragment extends Fragment {
                 .getInnerJSONObject();
 
         //This is big array list to hold the coordinates of all photos
-        List<Map<String, List<Number>>> all_photos_cooridinates = new ArrayList<Map<String, List<Number>>>();
+        List<List<CoordinateOfOneTag>> all_photos_cooridinates = new ArrayList<List<CoordinateOfOneTag>>();
 
         try {
             JSONArray outmostArray = jsonObject
@@ -231,7 +232,7 @@ public class ListViewFragment extends Fragment {
                 Log.d(TAG, "object of outmost array" + obj_of_outmostArray.toString());
 
                 //Store the coordinates of people in ONE photo
-                Map<String, List<Number>> people_coordinates = new HashMap<String, List<Number>>();
+                List<CoordinateOfOneTag> people_coordinates = new ArrayList<CoordinateOfOneTag>();
 
                 /*
                     check if the return result contains object 'tags',
@@ -257,11 +258,16 @@ public class ListViewFragment extends Fragment {
                         Number y = (Number) object.get("y");
                         Log.d(TAG, "specific name and coordinates  " + name  +"  "+ x + "  " + y );
 
+                        /*
                         List<Number> coordinate = new ArrayList<Number>();
                         coordinate.add(x);
                         coordinate.add(y);
 
                         people_coordinates.put(name, coordinate);
+                        */
+                        CoordinateOfOneTag xy = new CoordinateOfOneTag(name, x, y);
+                        people_coordinates.add(xy);
+
                         tag_counter ++;
                     }
 
@@ -302,18 +308,166 @@ public class ListViewFragment extends Fragment {
         /*
             Further calculate the distance between two tags
          */
-        findDistanceBetweenTwoTag(all_photos_cooridinates);
+        findDistanceBetweenTwoTags(all_photos_cooridinates);
 
     }
 
-    public void findDistanceBetweenTwoTag(List<Map<String, List<Number>>> all_photos_cooridinates)
+    /*
+        Caculate the distance between two tags on a photo and nomorlized it
+     */
+    public void findDistanceBetweenTwoTags(List<List<CoordinateOfOneTag>> all_photos_cooridinates)
     {
 
+        //new array list to hold the relativity of all tagged photos
+        List<List<RelativityOfTwoTags>> all_photos_relativity = new ArrayList<List<RelativityOfTwoTags>>();
+        /*
+            Loop all photos and calculate distance between two tags
+         */
+        for(int i = 0; i < all_photos_cooridinates.size(); i ++)
+        {
+            List<CoordinateOfOneTag> coordinates_one_photo = all_photos_cooridinates.get(i);
+            //Array list to hold all tagged people in a photo
+            List<RelativityOfTwoTags> array_relativity_twoTags = new ArrayList<RelativityOfTwoTags>();
+
+            /*
+                 following two for loop used for find all possible combination of two tags in a photo
+             */
+            for (int j = 0; j < coordinates_one_photo.size(); j++)
+            {
+                CoordinateOfOneTag nameXY = coordinates_one_photo.get(j);
+                String name0 = nameXY.getName();
+                Number x0 = nameXY.getX();
+                Number y0 = nameXY.getY();
+
+                for (int k = j + 1; k < coordinates_one_photo.size(); k++)
+                {
+                    CoordinateOfOneTag next_nameXY = coordinates_one_photo.get(k);
+                    String name1 = next_nameXY.getName();
+                    Number x1 = next_nameXY.getX();
+                    Number y1 = next_nameXY.getY();
+
+                    Number distance = Math.sqrt(Math.pow(Math.abs(x1.doubleValue()-x0.doubleValue()),2) +
+                                                Math.pow(Math.abs(y1.doubleValue()-y0.doubleValue()), 2));
+
+                    String nameOfTwoTag = new StringBuilder().append(name0).append(",").append(name1).toString();
+
+                    RelativityOfTwoTags r = new RelativityOfTwoTags(nameOfTwoTag, distance);
+                    array_relativity_twoTags.add(r);
+
+                }
+            }
+
+            all_photos_relativity.add(array_relativity_twoTags);
+        }
+
+        normalizedDistance(all_photos_relativity);
     }
 
-    class relativityOfTwoTags {
+    public void normalizedDistance(List<List<RelativityOfTwoTags>> all_photos_relativity)
+    {
+        /*
+            loop all photos and find the mallest distance between two tags
+         */
+        for (List<RelativityOfTwoTags> array_relativity_twoTags : all_photos_relativity)
+        {
+            /*
+                find the smallest distance
+             */
+            Number minValue = Integer.MAX_VALUE;
 
+            for (RelativityOfTwoTags R_TwoTags : array_relativity_twoTags)
+            {
+                Number tempValue = R_TwoTags.getDistance();
+                if (minValue.doubleValue() > tempValue.doubleValue())
+                {
+                    minValue = tempValue;
+                }
+            }
 
+            /*
+                 fill in the normalized distance for all pair of two tags in a photo
+             */
+            for (RelativityOfTwoTags R_TwoTags : array_relativity_twoTags)
+            {
+                R_TwoTags.setNormalizedValue((minValue.doubleValue()/R_TwoTags.getDistance().doubleValue()));
+            }
+
+        }
+
+        Log.d(TAG, "");
+    }
+
+    class CoordinateOfOneTag{
+
+        private String name;
+        private Number x;
+        private Number y;
+
+        CoordinateOfOneTag(String name, Number x, Number y) {
+            this.name = name;
+            this.x = x;
+            this.y = y;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public Number getX() {
+            return x;
+        }
+
+        public void setX(Number x) {
+            this.x = x;
+        }
+
+        public Number getY() {
+            return y;
+        }
+
+        public void setY(Number y) {
+            this.y = y;
+        }
+    }
+
+    class RelativityOfTwoTags {
+
+        private String nameOfTwoTags;
+        private Number distance;
+        private Number normalizedValue;
+
+        RelativityOfTwoTags(String nameOfTwoTags, Number distance) {
+            this.nameOfTwoTags = nameOfTwoTags;
+            this.distance = distance;
+        }
+
+        public String getNameOfTwoTags() {
+            return nameOfTwoTags;
+        }
+
+        public void setNameOfTwoTags(String nameOfTwoTags) {
+            this.nameOfTwoTags = nameOfTwoTags;
+        }
+
+        public Number getDistance() {
+            return distance;
+        }
+
+        public void setDistance(Number distance) {
+            this.distance = distance;
+        }
+
+        public Number getNormalizedValue() {
+            return normalizedValue;
+        }
+
+        public void setNormalizedValue(Number normalizedValue) {
+            this.normalizedValue = normalizedValue;
+        }
     }
 
     @Override
