@@ -30,6 +30,11 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 /**
  * Created by jxy on 23/01/15.
  */
@@ -169,7 +174,7 @@ public class ListViewFragment extends Fragment {
 
     private void makeRelationshipRequest(final Session session){
 
-        new Request(session, "me/photos",getRequestParameters(), HttpMethod.GET, new Request.Callback()
+        new Request(session, "me/photos/uploaded",getRequestParameters(), HttpMethod.GET, new Request.Callback()
         {
             @Override
             public void onCompleted(Response response)
@@ -181,6 +186,7 @@ public class ListViewFragment extends Fragment {
                 if (graphObject != null) {
                     if (graphObject.getProperty("data") != null) {
 
+                        //parse the JSON data and store in data structure
                         parseJSONData(graphObject);
 
                     }
@@ -200,7 +206,7 @@ public class ListViewFragment extends Fragment {
     }
 
     /*
-        parse JSON data for each tagged photo, and store them in data structure
+        parse JSON data for each tagged photo, and store them in ArrayList
      */
     private void parseJSONData(GraphObject graphObject){
 
@@ -208,11 +214,13 @@ public class ListViewFragment extends Fragment {
         JSONObject jsonObject = graphObject
                 .getInnerJSONObject();
 
+        //This is big array list to hold the coordinates of all photos
+        List<Map<String, List<Number>>> all_photos_cooridinates = new ArrayList<Map<String, List<Number>>>();
+
         try {
             JSONArray outmostArray = jsonObject
                     .getJSONArray("data");
             Log.d(TAG, "outmostArray" + outmostArray.toString());
-
 
             /*
                 loop tagged photos
@@ -222,23 +230,68 @@ public class ListViewFragment extends Fragment {
                 JSONObject obj_of_outmostArray = (JSONObject) outmostArray.get(i);
                 Log.d(TAG, "object of outmost array" + obj_of_outmostArray.toString());
 
-                JSONObject obj_of_tags = (JSONObject) obj_of_outmostArray.get("tags");
-                Log.d(TAG, "object of tags" + obj_of_tags.toString());
-
-                JSONArray array_of_tags =  obj_of_tags.getJSONArray("data");
-                Log.d(TAG, "tag data" + array_of_tags.toString());
+                //Store the coordinates of people in ONE photo
+                Map<String, List<Number>> people_coordinates = new HashMap<String, List<Number>>();
 
                 /*
-                    find tagged people
+                    check if the return result contains object 'tags',
+                    Due to some photos did not have any tags with it
                  */
-                for(int j = 0; j < array_of_tags.length(); j++)
+                JSONObject obj_of_tags = (JSONObject) obj_of_outmostArray.optJSONObject("tags");
+                if (obj_of_tags != null)
                 {
-                    JSONObject  object = (JSONObject) array_of_tags.get(j);
-                    String name = (String) object.get("name");
-                    Number x = (Number) object.get("x");
-                    Number y = (Number) object.get("y");
-                    Log.d(TAG, "specific name and coordinates  " + name  +"  "+ x + "  " + y );
+                    Log.d(TAG, "object of tags" + obj_of_tags.toString());
+
+                    JSONArray array_of_tags =  obj_of_tags.getJSONArray("data");
+                    Log.d(TAG, "tag data" + array_of_tags.toString());
+
+                    /*
+                      find tagged people in ONE photo
+                    */
+                    int tag_counter = 0;
+                    for(int j = 0; j < array_of_tags.length(); j++)
+                    {
+                        JSONObject  object = (JSONObject) array_of_tags.get(j);
+                        String name = (String) object.get("name");
+                        Number x = (Number) object.get("x");
+                        Number y = (Number) object.get("y");
+                        Log.d(TAG, "specific name and coordinates  " + name  +"  "+ x + "  " + y );
+
+                        List<Number> coordinate = new ArrayList<Number>();
+                        coordinate.add(x);
+                        coordinate.add(y);
+
+                        people_coordinates.put(name, coordinate);
+                        tag_counter ++;
+                    }
+
+
+                    if(tag_counter == 1)
+                    {
+                        continue;//Ignore the photo that has one tag
+                    }
+                    else
+                    {
+                        //add the coordinates of ONE photo to the big outer ArrayList
+                        all_photos_cooridinates.add(people_coordinates);
+                    }
+
+                    /*
+                        print out result for debug
+                     */
+                    /*
+                    for(Map.Entry <String, List<Number>> entry :  people_coordinates.entrySet())
+                    {
+                        String key = entry.getKey();
+                        List<Number> values = entry.getValue();
+                        Log.d(TAG, "people coordinates" + key + " " + values);
+                    }
+                    */
+
+
                 }
+                else
+                    continue; //if no tags with this photos, just continue
 
             }
 
@@ -246,10 +299,22 @@ public class ListViewFragment extends Fragment {
             e.printStackTrace();
         }
 
-
+        /*
+            Further calculate the distance between two tags
+         */
+        findDistanceBetweenTwoTag(all_photos_cooridinates);
 
     }
 
+    public void findDistanceBetweenTwoTag(List<Map<String, List<Number>>> all_photos_cooridinates)
+    {
+
+    }
+
+    class relativityOfTwoTags {
+
+
+    }
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
