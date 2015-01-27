@@ -35,6 +35,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * Created by jxy on 23/01/15.
@@ -47,6 +48,8 @@ public class ListViewFragment extends Fragment {
 
     private ProfilePictureView profilePictureView;
     private TextView userNameView;
+
+    ListView theListView;
 
     private UiLifecycleHelper uiHelper;
     private Session.StatusCallback callback = new Session.StatusCallback() {
@@ -96,7 +99,7 @@ public class ListViewFragment extends Fragment {
 
        ArrayAdapter<String> theAdapter =  new MyAdapter(getActivity(), show);
 
-        ListView theListView = (ListView)view.findViewById(R.id.list);
+        theListView = (ListView)view.findViewById(R.id.list);
         theListView.setAdapter(theAdapter);
 
         return view;
@@ -315,17 +318,17 @@ public class ListViewFragment extends Fragment {
         /*
             summation of relativity between two tags of all photos
          */
-        HashMap<String, HashMap<String, Number>> summation_relativity = summationOfRelativity(all_names, relativity_AllPhotos);
+        Map<String, Map<String, Number>> summation_relativity = summationOfRelativity(all_names, relativity_AllPhotos);
 
     }
 
-    public HashMap<String, HashMap<String, Number>> summationOfRelativity (List<String> all_names,
+    public Map<String, Map<String, Number>> summationOfRelativity (List<String> all_names,
                                                                            List<List<RelativityOfTwoTags>> relativity_AllPhotos)
     {
         /*
             find out all pair of tags that include the specific name
          */
-        HashMap<String, HashMap<String, Number>> summation_relativity = new HashMap<String, HashMap<String, Number>>();
+        HashMap<String, Map<String, Number>> summation_relativity = new HashMap<String, Map<String, Number>>();
 
         //loop all names
         for (String nameToFind : all_names)
@@ -344,7 +347,7 @@ public class ListViewFragment extends Fragment {
                     String name1 = temp_name[0];
                     String name2 = temp_name[1];
 
-                    if (nameToFind.equals(name1) || nameToFind.equals(name2))
+                    if (nameToFind.equalsIgnoreCase(name1) || nameToFind.equalsIgnoreCase(name2))
                     {
                         target_relativity.add(r_iterator);
                     }
@@ -353,25 +356,70 @@ public class ListViewFragment extends Fragment {
             }
 
             //take summation of relativity of all possible two-tags
-            HashMap<String, Number> summationResult = takeSummation(nameToFind, target_relativity);
+            Map<String, Number> summationResult = takeSummation(nameToFind, target_relativity);
+
+            summation_relativity.put(nameToFind, summationResult);
 
         }
 
         return summation_relativity;
     }
 
-    private HashMap<String, Number> takeSummation(String nameToFind, List<RelativityOfTwoTags> target_relativity)
+    private Map<String, Number> takeSummation(String nameToFind, List<RelativityOfTwoTags> target_relativity)
     {
-        HashMap<String, Number> sum_of_relativity = new HashMap<String, Number>();
+        Map<String, Number> sum_of_relativity = new TreeMap<String, Number>(String.CASE_INSENSITIVE_ORDER);
 
-        for (RelativityOfTwoTags r_iterator : target_relativity)
+        for (int i = 0; i < target_relativity.size(); i ++)
         {
+            RelativityOfTwoTags r_iterator = target_relativity.get(i);
+
             String name_twoTags = r_iterator.getNameOfTwoTags();
             String [] temp_name = name_twoTags.split(",",0);
-            String name1 = temp_name[0];
-            String name2 = temp_name[1];
+
+            Double sumRelativity = 0.0;
+            String friendName0 = null;
+
+            friendName0 = findFriendName(nameToFind,temp_name);
+
+            //check to see if the name already stored in hash map
+            Number sum = sum_of_relativity.get(friendName0);
+
+            if (sum == null)
+            {
+                for(int j = i; j < target_relativity.size(); j ++)
+                {
+
+                    RelativityOfTwoTags search_itr = target_relativity.get(j);
+                    String search_name_twoTags = search_itr.getNameOfTwoTags();
+                    String [] search_temp_name = search_name_twoTags.split(",",0);
+
+                    String friendName1 = findFriendName(nameToFind, search_temp_name);
+
+                    if (friendName0.equalsIgnoreCase(friendName1))
+                    {
+                        sumRelativity += search_itr.getNormalizedValue().doubleValue();
+                        Log.d(TAG, "");
+                    }
+                }
+
+                sum_of_relativity.put(friendName0, sumRelativity);
+            }
+
         }
         return sum_of_relativity;
+    }
+
+    private String findFriendName(String nameToFind, String[] temp_name)
+    {
+        String friendName = null;
+        for(String friend : temp_name)
+        {
+            if(!friend.equalsIgnoreCase(nameToFind))
+            {
+                friendName = friend;
+            }
+        }
+        return friendName;
     }
 
     /*
@@ -533,12 +581,16 @@ public class ListViewFragment extends Fragment {
         }
     }
 
+    /*
+        add all friend name appeared in all photos, and check duplication
+     */
     public void addAllNames (String name, List<String> all_name)
     {
+        //check duplication
         boolean found = false;
         for (String name_iterator : all_name)
         {
-            if (name_iterator.equals(name))
+            if (name_iterator.equalsIgnoreCase(name))
             {
                 found = true;
             }
