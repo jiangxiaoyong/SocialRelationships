@@ -218,6 +218,9 @@ public class ListViewFragment extends Fragment {
         //This is big array list to hold the coordinates of all photos
         List<List<CoordinateOfOneTag>> all_photos_cooridinates = new ArrayList<List<CoordinateOfOneTag>>();
 
+        //Array list to store the name of all people appeared in all photos
+        List<String> all_names = new ArrayList<String>();
+
         try {
             JSONArray outmostArray = jsonObject
                     .getJSONArray("data");
@@ -258,23 +261,23 @@ public class ListViewFragment extends Fragment {
                         Number y = (Number) object.get("y");
                         Log.d(TAG, "specific name and coordinates  " + name  +"  "+ x + "  " + y );
 
-                        /*
-                        List<Number> coordinate = new ArrayList<Number>();
-                        coordinate.add(x);
-                        coordinate.add(y);
 
-                        people_coordinates.put(name, coordinate);
-                        */
                         CoordinateOfOneTag xy = new CoordinateOfOneTag(name, x, y);
                         people_coordinates.add(xy);
+
+                        //store all name appeared in all photos
+                        addAllNames(name, all_names);
 
                         tag_counter ++;
                     }
 
-
+                    /*
+                        Ignore the photo that has one tag
+                     */
                     if(tag_counter == 1)
                     {
-                        continue;//Ignore the photo that has one tag
+                        all_names.remove((all_names.size() - 1));
+                        continue;
                     }
                     else
                     {
@@ -294,7 +297,6 @@ public class ListViewFragment extends Fragment {
                     }
                     */
 
-
                 }
                 else
                     continue; //if no tags with this photos, just continue
@@ -308,14 +310,74 @@ public class ListViewFragment extends Fragment {
         /*
             Further calculate the distance between two tags
          */
-        findDistanceBetweenTwoTags(all_photos_cooridinates);
+        List<List<RelativityOfTwoTags>> relativity_AllPhotos = findDistanceBetweenTwoTags(all_photos_cooridinates);
 
+        /*
+            summation of relativity between two tags of all photos
+         */
+        HashMap<String, HashMap<String, Number>> summation_relativity = summationOfRelativity(all_names, relativity_AllPhotos);
+
+    }
+
+    public HashMap<String, HashMap<String, Number>> summationOfRelativity (List<String> all_names,
+                                                                           List<List<RelativityOfTwoTags>> relativity_AllPhotos)
+    {
+        /*
+            find out all pair of tags that include the specific name
+         */
+        HashMap<String, HashMap<String, Number>> summation_relativity = new HashMap<String, HashMap<String, Number>>();
+
+        //loop all names
+        for (String nameToFind : all_names)
+        {
+
+            List<RelativityOfTwoTags> target_relativity = new ArrayList<RelativityOfTwoTags>();
+
+            //loop for all photos to find out desired target pair of two tags
+            for (List<RelativityOfTwoTags> coordinates_one_photo : relativity_AllPhotos)
+            {
+                //loop all coordinates in one photo
+                for (RelativityOfTwoTags r_iterator : coordinates_one_photo)
+                {
+                    String name_twoTags = r_iterator.getNameOfTwoTags();
+                    String [] temp_name = name_twoTags.split(",",0);
+                    String name1 = temp_name[0];
+                    String name2 = temp_name[1];
+
+                    if (nameToFind.equals(name1) || nameToFind.equals(name2))
+                    {
+                        target_relativity.add(r_iterator);
+                    }
+
+                }
+            }
+
+            //take summation of relativity of all possible two-tags
+            HashMap<String, Number> summationResult = takeSummation(nameToFind, target_relativity);
+
+        }
+
+        return summation_relativity;
+    }
+
+    private HashMap<String, Number> takeSummation(String nameToFind, List<RelativityOfTwoTags> target_relativity)
+    {
+        HashMap<String, Number> sum_of_relativity = new HashMap<String, Number>();
+
+        for (RelativityOfTwoTags r_iterator : target_relativity)
+        {
+            String name_twoTags = r_iterator.getNameOfTwoTags();
+            String [] temp_name = name_twoTags.split(",",0);
+            String name1 = temp_name[0];
+            String name2 = temp_name[1];
+        }
+        return sum_of_relativity;
     }
 
     /*
         Caculate the distance between two tags on a photo and nomorlized it
      */
-    public void findDistanceBetweenTwoTags(List<List<CoordinateOfOneTag>> all_photos_cooridinates)
+    public List<List<RelativityOfTwoTags>> findDistanceBetweenTwoTags(List<List<CoordinateOfOneTag>> all_photos_cooridinates)
     {
 
         //new array list to hold the relativity of all tagged photos
@@ -361,6 +423,8 @@ public class ListViewFragment extends Fragment {
         }
 
         normalizedDistance(all_photos_relativity);
+
+        return all_photos_relativity;
     }
 
     public void normalizedDistance(List<List<RelativityOfTwoTags>> all_photos_relativity)
@@ -394,7 +458,6 @@ public class ListViewFragment extends Fragment {
 
         }
 
-        Log.d(TAG, "");
     }
 
     class CoordinateOfOneTag{
@@ -470,6 +533,24 @@ public class ListViewFragment extends Fragment {
         }
     }
 
+    public void addAllNames (String name, List<String> all_name)
+    {
+        boolean found = false;
+        for (String name_iterator : all_name)
+        {
+            if (name_iterator.equals(name))
+            {
+                found = true;
+            }
+        }
+
+        if (found == false)
+        {
+            all_name.add(name);
+        }
+
+    }
+
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -501,6 +582,5 @@ public class ListViewFragment extends Fragment {
         super.onDestroy();
         uiHelper.onDestroy();
     }
-
 
 }
