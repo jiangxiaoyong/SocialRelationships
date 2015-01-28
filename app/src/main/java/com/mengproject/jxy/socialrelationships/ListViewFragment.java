@@ -13,6 +13,7 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.ListAdapter;
 import android.widget.ListView;
+import android.widget.SimpleAdapter;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -31,11 +32,14 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.SortedSet;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 /**
  * Created by jxy on 23/01/15.
@@ -48,8 +52,11 @@ public class ListViewFragment extends Fragment {
 
     private ProfilePictureView profilePictureView;
     private TextView userNameView;
+    private String hostUserName;
 
+    Map<String, Map<String, Number>> all_friends_relativity = null;
     ListView theListView;
+    ArrayAdapter<Friend> myAdapter;
 
     private UiLifecycleHelper uiHelper;
     private Session.StatusCallback callback = new Session.StatusCallback() {
@@ -93,14 +100,13 @@ public class ListViewFragment extends Fragment {
         /*
             fill in list view
          */
-        String [] show = new String[] { "Android", "iPhone", "WindowsMobile",
-                "Blackberry", "WebOS", "Ubuntu", "Windows7", "Max OS X",
-                "Linux", "OS/2" };
 
-       ArrayAdapter<String> theAdapter =  new MyAdapter(getActivity(), show);
+        ArrayList<Friend> arrayOfFriends = new ArrayList<Friend>();
 
-        theListView = (ListView)view.findViewById(R.id.list);
-        theListView.setAdapter(theAdapter);
+       myAdapter =  new MyAdapter(getActivity(), arrayOfFriends);
+
+       theListView = (ListView)view.findViewById(R.id.list);
+       theListView.setAdapter(myAdapter);
 
         return view;
     }
@@ -142,6 +148,8 @@ public class ListViewFragment extends Fragment {
             // Get the user's data.
             makeUserInfoRequest(session);
             makeRelationshipRequest(session);
+
+
         }else if (state.isClosed()) {
             Log.d(TAG, "Logged out...");
         }
@@ -166,6 +174,9 @@ public class ListViewFragment extends Fragment {
 
                                 // Set the Textview's text to the user's name.
                                 userNameView.setText(user.getName());
+
+                                //get host user name
+                                hostUserName = user.getName();
                             }
                         }
                         if (response.getError() != null) {
@@ -191,7 +202,13 @@ public class ListViewFragment extends Fragment {
                     if (graphObject.getProperty("data") != null) {
 
                         //parse the JSON data and store in data structure
-                        parseJSONData(graphObject);
+                        ListViewFragment.this.all_friends_relativity = parseJSONData(graphObject);
+                        Map<String, Number> friends = all_friends_relativity.get(hostUserName);
+
+                        if (hostUserName != null && all_friends_relativity != null)
+                        {
+                            populateDataToListView(friends);
+                        }
 
                     }
                 }
@@ -200,6 +217,40 @@ public class ListViewFragment extends Fragment {
         }).executeAsync();
 
     }
+
+    private void populateDataToListView( Map<String, Number> friends) {
+
+       // Log.d(TAG, "sort " + entriesSortedByValues(friends));
+
+        List<Friend> arrayOfFriends = new ArrayList<Friend>();
+
+        for (Map.Entry<String, Number> entry : friends.entrySet())
+        {
+            String name = entry.getKey();
+            Number relativity = entry.getValue();
+
+            Friend thefriend = new Friend(name, relativity);
+            arrayOfFriends.add(thefriend);
+        }
+
+        myAdapter =  new MyAdapter(getActivity(), arrayOfFriends);
+        theListView.setAdapter(myAdapter);
+    }
+
+    static <K,V extends Comparable<? super V>>
+    SortedSet<Map.Entry<K,V>> entriesSortedByValues(Map<K,V> map) {
+        SortedSet<Map.Entry<K,V>> sortedEntries = new TreeSet<Map.Entry<K,V>>(
+                new Comparator<Map.Entry<K,V>>() {
+                    @Override public int compare(Map.Entry<K,V> e1, Map.Entry<K,V> e2) {
+                        int res = e1.getValue().compareTo(e2.getValue());
+                        return res != 0 ? res : 1;
+                    }
+                }
+        );
+        sortedEntries.addAll(map.entrySet());
+        return sortedEntries;
+    }
+
 
     //get specific tagged photos
     private Bundle getRequestParameters()
@@ -212,7 +263,7 @@ public class ListViewFragment extends Fragment {
     /*
         parse JSON data for each tagged photo, and store them in ArrayList
      */
-    private void parseJSONData(GraphObject graphObject){
+    private Map<String, Map<String, Number>> parseJSONData(GraphObject graphObject){
 
         // Get the data, parse info to get the key/value info
         JSONObject jsonObject = graphObject
@@ -319,6 +370,8 @@ public class ListViewFragment extends Fragment {
             summation of relativity between two tags of all photos
          */
         Map<String, Map<String, Number>> summation_relativity = summationOfRelativity(all_names, relativity_AllPhotos);
+
+        return summation_relativity;
 
     }
 
@@ -602,6 +655,7 @@ public class ListViewFragment extends Fragment {
         }
 
     }
+
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
