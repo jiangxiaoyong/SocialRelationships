@@ -6,10 +6,10 @@ package com.mengproject.jxy.socialrelationships;
 public class Friend {
 
     public String name;
-    public Number relativity;
+    public Double relativity;
 
     public Friend(String name, Number relativity) {
         this.name = name;
-        this.relativity = relativity;
+        this.relativity = relativity.doubleValue();
     }
 }

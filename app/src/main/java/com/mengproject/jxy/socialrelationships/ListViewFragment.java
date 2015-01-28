@@ -34,6 +34,7 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -54,7 +55,7 @@ public class ListViewFragment extends Fragment {
     private TextView userNameView;
     private String hostUserName;
 
-    Map<String, Map<String, Number>> all_friends_relativity = null;
+    Map<String, Map<String, Double>> all_friends_relativity = null;
     ListView theListView;
     ArrayAdapter<Friend> myAdapter;
 
@@ -203,7 +204,7 @@ public class ListViewFragment extends Fragment {
 
                         //parse the JSON data and store in data structure
                         ListViewFragment.this.all_friends_relativity = parseJSONData(graphObject);
-                        Map<String, Number> friends = all_friends_relativity.get(hostUserName);
+                        Map<String, Double> friends = all_friends_relativity.get(hostUserName);
 
                         if (hostUserName != null && all_friends_relativity != null)
                         {
@@ -218,13 +219,27 @@ public class ListViewFragment extends Fragment {
 
     }
 
-    private void populateDataToListView( Map<String, Number> friends) {
+    private void populateDataToListView( Map<String, Double> friends) {
 
-       // Log.d(TAG, "sort " + entriesSortedByValues(friends));
+       Log.d(TAG, "sort " + entriesSortedByValues(friends));
+
+        SortedSet<Map.Entry<String,Double>> sortedFriends = entriesSortedByValues(friends);
 
         List<Friend> arrayOfFriends = new ArrayList<Friend>();
 
-        for (Map.Entry<String, Number> entry : friends.entrySet())
+        Iterator it = sortedFriends.iterator();
+
+        while(it.hasNext())
+        {
+            Map.Entry<String, Double> entry = (Map.Entry<String, Double>) it.next();
+            String name = entry.getKey();
+            Number relativity = entry.getValue();
+
+            Friend thefriend = new Friend(name, relativity);
+            arrayOfFriends.add(thefriend);
+        }
+        /*
+        for (Map.Entry<String, Double> entry : friends.entrySet())
         {
             String name = entry.getKey();
             Number relativity = entry.getValue();
@@ -232,6 +247,7 @@ public class ListViewFragment extends Fragment {
             Friend thefriend = new Friend(name, relativity);
             arrayOfFriends.add(thefriend);
         }
+        */
 
         myAdapter =  new MyAdapter(getActivity(), arrayOfFriends);
         theListView.setAdapter(myAdapter);
@@ -242,7 +258,7 @@ public class ListViewFragment extends Fragment {
         SortedSet<Map.Entry<K,V>> sortedEntries = new TreeSet<Map.Entry<K,V>>(
                 new Comparator<Map.Entry<K,V>>() {
                     @Override public int compare(Map.Entry<K,V> e1, Map.Entry<K,V> e2) {
-                        int res = e1.getValue().compareTo(e2.getValue());
+                        int res = e2.getValue().compareTo(e1.getValue());
                         return res != 0 ? res : 1;
                     }
                 }
@@ -263,7 +279,7 @@ public class ListViewFragment extends Fragment {
     /*
         parse JSON data for each tagged photo, and store them in ArrayList
      */
-    private Map<String, Map<String, Number>> parseJSONData(GraphObject graphObject){
+    private Map<String, Map<String, Double>> parseJSONData(GraphObject graphObject){
 
         // Get the data, parse info to get the key/value info
         JSONObject jsonObject = graphObject
@@ -369,19 +385,19 @@ public class ListViewFragment extends Fragment {
         /*
             summation of relativity between two tags of all photos
          */
-        Map<String, Map<String, Number>> summation_relativity = summationOfRelativity(all_names, relativity_AllPhotos);
+        Map<String, Map<String, Double>> summation_relativity = summationOfRelativity(all_names, relativity_AllPhotos);
 
         return summation_relativity;
 
     }
 
-    public Map<String, Map<String, Number>> summationOfRelativity (List<String> all_names,
+    public Map<String, Map<String, Double>> summationOfRelativity (List<String> all_names,
                                                                            List<List<RelativityOfTwoTags>> relativity_AllPhotos)
     {
         /*
             find out all pair of tags that include the specific name
          */
-        HashMap<String, Map<String, Number>> summation_relativity = new HashMap<String, Map<String, Number>>();
+        HashMap<String, Map<String, Double>> summation_relativity = new HashMap<String, Map<String, Double>>();
 
         //loop all names
         for (String nameToFind : all_names)
@@ -409,7 +425,7 @@ public class ListViewFragment extends Fragment {
             }
 
             //take summation of relativity of all possible two-tags
-            Map<String, Number> summationResult = takeSummation(nameToFind, target_relativity);
+            Map<String, Double> summationResult = takeSummation(nameToFind, target_relativity);
 
             summation_relativity.put(nameToFind, summationResult);
 
@@ -418,9 +434,9 @@ public class ListViewFragment extends Fragment {
         return summation_relativity;
     }
 
-    private Map<String, Number> takeSummation(String nameToFind, List<RelativityOfTwoTags> target_relativity)
+    private Map<String, Double> takeSummation(String nameToFind, List<RelativityOfTwoTags> target_relativity)
     {
-        Map<String, Number> sum_of_relativity = new TreeMap<String, Number>(String.CASE_INSENSITIVE_ORDER);
+        Map<String, Double> sum_of_relativity = new TreeMap<String, Double>(String.CASE_INSENSITIVE_ORDER);
 
         for (int i = 0; i < target_relativity.size(); i ++)
         {
