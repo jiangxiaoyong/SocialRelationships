@@ -80,6 +80,7 @@ public class ListViewFragment extends Fragment {
         uiHelper.onCreate(savedInstanceState);
     }
 
+
     @Override
     public View onCreateView(LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
@@ -162,7 +163,7 @@ public class ListViewFragment extends Fragment {
     }
 
 
-    /*  anoher method to create list view
+    /* anoher method to create list view
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
@@ -739,7 +740,21 @@ public class ListViewFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
+
+        /*
+            during dedug press back button to re-show listview
+            I thought it should call onSessionStateChange
+        */
+        /*
+        Session session = Session.getActiveSession();
+        if (session != null &&
+                (session.isOpened() || session.isClosed()) ) {
+            onSessionStateChange(session, session.getState(), null);
+        }
+        */
+
         uiHelper.onResume();
+
     }
 
     @Override

@@ -20,8 +20,8 @@ public class MainActivity extends FragmentActivity {
     private MainFragment mainFragment;
 
     private static final int WELCOM = 0;
-    private static final int SELECTION = 1;
-    private static final int LISTVIEW = 2;
+    //private static final int SELECTION = 1;
+    private static final int LISTVIEW = 1;
     private static final int FRAGMENT_COUNT = LISTVIEW +1;
 
     private Fragment[] fragments = new Fragment[FRAGMENT_COUNT];
@@ -70,7 +70,7 @@ public class MainActivity extends FragmentActivity {
 
         FragmentManager fm = getSupportFragmentManager();
         fragments[WELCOM] = fm.findFragmentById(R.id.welcomFragment);
-        fragments[SELECTION] = fm.findFragmentById(R.id.selectionFragment);
+        //fragments[SELECTION] = fm.findFragmentById(R.id.selectionFragment);
         fragments[LISTVIEW] = fm.findFragmentById(R.id.listViewFragment);
 
         FragmentTransaction transaction = fm.beginTransaction();
@@ -137,7 +137,7 @@ public class MainActivity extends FragmentActivity {
         if (session != null && session.isOpened()) {
             // if the session is already open,
             // try to show the selection fragment
-            showFragment(SELECTION, false);
+            showFragment(LISTVIEW, false);
         } else {
             // otherwise present the splash screen
             // and ask the person to login.
