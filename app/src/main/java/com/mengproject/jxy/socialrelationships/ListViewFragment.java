@@ -10,6 +10,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListAdapter;
 import android.widget.ListView;
@@ -56,6 +57,7 @@ public class ListViewFragment extends Fragment {
     private String hostUserName;
 
     Map<String, Map<String, Double>> all_friends_relativity = null;
+    SortedSet<Map.Entry<String,Double>> sortedFriends = null;
     ListView theListView;
     ArrayAdapter<Friend> myAdapter;
 
@@ -67,6 +69,9 @@ public class ListViewFragment extends Fragment {
         }
     };
 
+    public ListViewFragment(){
+
+    }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -109,6 +114,50 @@ public class ListViewFragment extends Fragment {
        theListView = (ListView)view.findViewById(R.id.list);
        theListView.setAdapter(myAdapter);
 
+
+        /*
+            set up the click listener for listview
+         */
+        theListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view,
+                                    int position, long id) {
+                Toast.makeText(getActivity(),
+                        "Click ListItem Number " + position, Toast.LENGTH_LONG)
+                        .show();
+
+                /*
+                    figure out which friend has been clicked
+                 */
+                int counter = 0;
+                String friendName = null;
+                Iterator it = sortedFriends.iterator();
+                while(it.hasNext())
+                {
+                    Map.Entry<String, Double> entry = (Map.Entry<String, Double>) it.next();
+                    String name = entry.getKey();
+
+                    if (counter == position)
+                    {
+                        friendName = name;
+                        break;
+                    }
+                    counter ++;
+                }
+
+
+                TreeMap<String, Double> friends = (TreeMap<String, Double>) all_friends_relativity.get(friendName);
+
+
+                Intent friendRelationship = new Intent(getActivity(), FriendRelationship.class);
+                friendRelationship.putExtra("desired_friend",friendName);
+                friendRelationship.putExtra("friends", friends);
+                startActivity(friendRelationship);
+            }
+        });
+
+
+
         return view;
     }
 
@@ -141,7 +190,6 @@ public class ListViewFragment extends Fragment {
         listView.setBackgroundColor(Color.BLACK);
     }
     */
-
 
     private void onSessionStateChange(final Session session, SessionState state, Exception exception) {
         if (session != null && session.isOpened()) {
@@ -206,6 +254,10 @@ public class ListViewFragment extends Fragment {
                         ListViewFragment.this.all_friends_relativity = parseJSONData(graphObject);
                         Map<String, Double> friends = all_friends_relativity.get(hostUserName);
 
+                        /*
+                            Due to Async request of user info and tag
+                            So we have to ensure both host user name and all relativity have beed filled
+                         */
                         if (hostUserName != null && all_friends_relativity != null)
                         {
                             populateDataToListView(friends);
@@ -221,14 +273,14 @@ public class ListViewFragment extends Fragment {
 
     private void populateDataToListView( Map<String, Double> friends) {
 
-       Log.d(TAG, "sort " + entriesSortedByValues(friends));
-
-        SortedSet<Map.Entry<String,Double>> sortedFriends = entriesSortedByValues(friends);
-
         List<Friend> arrayOfFriends = new ArrayList<Friend>();
 
-        Iterator it = sortedFriends.iterator();
+        /*
+            sort friend based on relativity descend order
+         */
+        sortedFriends = entriesSortedByValues(friends);
 
+        Iterator it = sortedFriends.iterator();
         while(it.hasNext())
         {
             Map.Entry<String, Double> entry = (Map.Entry<String, Double>) it.next();
@@ -253,6 +305,9 @@ public class ListViewFragment extends Fragment {
         theListView.setAdapter(myAdapter);
     }
 
+    /*
+        sort tree map
+     */
     static <K,V extends Comparable<? super V>>
     SortedSet<Map.Entry<K,V>> entriesSortedByValues(Map<K,V> map) {
         SortedSet<Map.Entry<K,V>> sortedEntries = new TreeSet<Map.Entry<K,V>>(
@@ -397,7 +452,7 @@ public class ListViewFragment extends Fragment {
         /*
             find out all pair of tags that include the specific name
          */
-        HashMap<String, Map<String, Double>> summation_relativity = new HashMap<String, Map<String, Double>>();
+        TreeMap<String, Map<String, Double>> summation_relativity = new TreeMap<String, Map<String, Double>>(String.CASE_INSENSITIVE_ORDER);
 
         //loop all names
         for (String nameToFind : all_names)
