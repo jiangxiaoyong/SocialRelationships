@@ -8,6 +8,7 @@ import android.support.v4.app.Fragment;
 import android.support.v4.app.ListFragment;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
@@ -728,6 +729,10 @@ public class ListViewFragment extends Fragment {
 
     }
 
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        return super.onOptionsItemSelected(item);
+    }
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -745,13 +750,13 @@ public class ListViewFragment extends Fragment {
             during dedug press back button to re-show listview
             I thought it should call onSessionStateChange
         */
-        /*
+
         Session session = Session.getActiveSession();
         if (session != null &&
                 (session.isOpened() || session.isClosed()) ) {
             onSessionStateChange(session, session.getState(), null);
         }
-        */
+
 
         uiHelper.onResume();
 

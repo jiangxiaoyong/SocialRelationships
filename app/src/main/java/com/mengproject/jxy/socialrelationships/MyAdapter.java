@@ -19,6 +19,14 @@ import java.util.List;
  */
 public class MyAdapter extends ArrayAdapter<Friend> {
 
+    /*
+        for improving performance, which speedup the population of listView
+     */
+    // View lookup cache
+    private static class ViewHolder {
+        TextView name;
+        TextView relativity;
+    }
 
     public MyAdapter(Context context, List<Friend> values) {
         super(context, 0, values);
@@ -29,10 +37,40 @@ public class MyAdapter extends ArrayAdapter<Friend> {
 
         Friend friend = getItem(position);
 
+        // Check if an existing view is being reused, otherwise inflate the view
+        ViewHolder viewHolder; // view lookup cache stored in tag
+
         if (convertView == null)
         {
+            viewHolder = new ViewHolder();
             convertView = LayoutInflater.from(getContext()).inflate(R.layout.row_layout, parent, false);
+
+            viewHolder.name = (TextView) convertView.findViewById(R.id.rowCellTextView1);
+            viewHolder.relativity = (TextView) convertView.findViewById(R.id.rowCellTextView2);
+
+            convertView.setTag(viewHolder);
         }
+        else
+        {
+            viewHolder = (ViewHolder)convertView.getTag();
+        }
+
+        // Populate the data into the template view using the data object, improving performance
+        viewHolder.name.setText(friend.name);
+        viewHolder.relativity.setText(friend.relativity.toString());
+
+        /*
+        // Lookup view for data population
+        TextView theTextView1 = (TextView) convertView.findViewById(R.id.rowCellTextView1);
+        TextView theTextView2 = (TextView) convertView.findViewById(R.id.rowCellTextView2);
+
+        // Populate the data into the template view using the data object
+        theTextView1.setText(friend.name);
+        theTextView2.setText(friend.relativity.toString());
+        */
+
+        // Return the completed view to render on screen
+        return convertView;
 
         /*
         LayoutInflater theInflater = LayoutInflater.from(getContext());
@@ -50,16 +88,7 @@ public class MyAdapter extends ArrayAdapter<Friend> {
         return theView;
 
         */
-        // Lookup view for data population
-        TextView theTextView1 = (TextView) convertView.findViewById(R.id.rowCellTextView1);
-        TextView theTextView2 = (TextView) convertView.findViewById(R.id.rowCellTextView2);
 
-        // Populate the data into the template view using the data object
-        theTextView1.setText(friend.name);
-        theTextView2.setText(friend.relativity.toString());
-
-        // Return the completed view to render on screen
-        return convertView;
 
     }
 }

@@ -89,6 +89,40 @@ public class MainActivity extends FragmentActivity {
         return super.onCreateOptionsMenu(menu);
     }
 
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle action bar item clicks here. The action bar will
+        // automatically handle clicks on the Home/Up button, so long
+        // as you specify a parent activity in AndroidManifest.xml.
+        int id = item.getItemId();
+
+        /*
+            logout from facebook
+         */
+        if (id == R.id.action_one) {
+
+            Session session = Session.getActiveSession();
+            if (session != null) {
+
+                if (!session.isClosed()) {
+                    session.closeAndClearTokenInformation();
+                    //clear your preferences if saved
+                }
+            } else {
+
+                session = new Session(this);
+                Session.setActiveSession(session);
+
+                session.closeAndClearTokenInformation();
+                //clear your preferences if saved
+
+            }
+            return true;
+        }
+
+        return super.onOptionsItemSelected(item);
+    }
+
 
     private void onSessionStateChange(Session session, SessionState state, Exception exception) {
         // Only make changes if the activity is visible
