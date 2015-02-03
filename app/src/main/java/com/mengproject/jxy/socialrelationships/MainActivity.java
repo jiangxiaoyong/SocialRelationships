@@ -94,11 +94,14 @@ public class MainActivity extends FragmentActivity {
         // Handle action bar item clicks here. The action bar will
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
 
+        int id = item.getItemId();
         /*
             logout from facebook
+            ListView Fragment will hand the menu clicking
+            However, the activity will receive the menu clicking first, then the fragment
          */
+        /*
         if (id == R.id.action_one) {
 
             Session session = Session.getActiveSession();
@@ -119,7 +122,7 @@ public class MainActivity extends FragmentActivity {
             }
             return true;
         }
-
+        */
         return super.onOptionsItemSelected(item);
     }
 

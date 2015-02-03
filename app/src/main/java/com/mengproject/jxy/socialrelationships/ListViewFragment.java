@@ -8,6 +8,8 @@ import android.support.v4.app.Fragment;
 import android.support.v4.app.ListFragment;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
@@ -29,6 +31,10 @@ import com.facebook.model.GraphObject;
 import com.facebook.model.GraphUser;
 import com.facebook.widget.ProfilePictureView;
 
+import org.jgrapht.generate.CompleteGraphGenerator;
+import org.jgrapht.traverse.BreadthFirstIterator;
+import org.jgrapht.traverse.DepthFirstIterator;
+import org.jgrapht.traverse.GraphIterator;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -36,13 +42,25 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
+
+import org.jgraph.*;
+import org.jgraph.graph.*;
+
+import org.jgrapht.*;
+import org.jgrapht.ext.*;
+import org.jgrapht.graph.*;
+
+// resolve ambiguity
+import org.jgrapht.graph.DefaultEdge;
 
 /**
  * Created by jxy on 23/01/15.
@@ -62,6 +80,10 @@ public class ListViewFragment extends Fragment {
     ListView theListView;
     ArrayAdapter<Friend> myAdapter;
 
+
+    //Number of vertices
+    static int size = 10;
+
     private UiLifecycleHelper uiHelper;
     private Session.StatusCallback callback = new Session.StatusCallback() {
         @Override
@@ -69,6 +91,7 @@ public class ListViewFragment extends Fragment {
             onSessionStateChange(session, state, exception);
         }
     };
+
 
     public ListViewFragment(){
 
@@ -79,8 +102,18 @@ public class ListViewFragment extends Fragment {
         super.onCreate(savedInstanceState);
         uiHelper = new UiLifecycleHelper(getActivity(), callback);
         uiHelper.onCreate(savedInstanceState);
+
+        /*
+            claim that this fragment will participate receiving menu clicking
+         */
+        setHasOptionsMenu(true);
     }
 
+    @Override
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+        // TODO Add your menu entries here
+        super.onCreateOptionsMenu(menu, inflater);
+    }
 
     @Override
     public View onCreateView(LayoutInflater inflater,
@@ -147,10 +180,10 @@ public class ListViewFragment extends Fragment {
                     counter ++;
                 }
 
-
+                /*
+                    start new activity to show desired friend's relativity
+                 */
                 TreeMap<String, Double> friends = (TreeMap<String, Double>) all_friends_relativity.get(friendName);
-
-
                 Intent friendRelationship = new Intent(getActivity(), FriendRelationship.class);
                 friendRelationship.putExtra("desired_friend",friendName);
                 friendRelationship.putExtra("friends", friends);
@@ -731,7 +764,107 @@ public class ListViewFragment extends Fragment {
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
+
+        int id = item.getItemId();
+
+        if (id == R.id.action_one) {
+
+            /*
+                logout from facebook
+            */
+            Session session = Session.getActiveSession();
+            if (session != null) {
+
+                if (!session.isClosed()) {
+                    session.closeAndClearTokenInformation();
+                    //clear your preferences if saved
+                }
+            } else {
+
+                session = new Session(getActivity());
+                Session.setActiveSession(session);
+
+                session.closeAndClearTokenInformation();
+                //clear your preferences if saved
+
+            }
+            return true;
+            
+        }
+        else if (id == R.id.action_two){
+            
+            /*
+                show relativity of second order
+             */
+            secondOrderRelativity();
+
+            return true;
+        }
+
         return super.onOptionsItemSelected(item);
+    }
+
+    private void secondOrderRelativity() {
+
+        /*
+            construct the graph of all friends relativity
+         */
+        constructSeondOrderGraph();
+
+    }
+
+    private void constructSeondOrderGraph() {
+
+        WeightedGraph<String, DefaultWeightedEdge> graph =
+                new ListenableUndirectedWeightedGraph<String, DefaultWeightedEdge>(DefaultWeightedEdge.class);
+
+        //temporary store all friends name
+        List<String> friends_Name = new ArrayList<String>();
+
+        /*
+            add vertices by using all friends name
+         */
+        for (Map.Entry<String, Map<String, Double>> entry : all_friends_relativity.entrySet())
+        {
+            Log.d(TAG, "name " + entry.getKey() );
+            graph.addVertex(entry.getKey().toString());
+
+            friends_Name.add(entry.getKey().toString());
+        }
+
+        /*
+            add edge and corresponding weight
+         */
+        for (int i = 0 ; i < friends_Name.size(); i ++)
+        {
+            String name1 = friends_Name.get(i);
+            Map<String, Double> friend_R_info =  all_friends_relativity.get(name1);
+
+            for (Map.Entry<String, Double> entry : friend_R_info.entrySet())
+            {
+                String name2 = entry.getKey();
+                Double relativity = entry.getValue();
+
+                /*
+                    only add non-exist edge
+                 */
+                if (graph.getEdge(name1, name2) == null)
+                {
+                    DefaultWeightedEdge we = graph.addEdge(name1,name2);//add edge
+                    graph.setEdgeWeight(we, relativity);//set weight
+                }
+
+            }
+            Log.d(TAG, graph.toString());
+
+        }
+
+        GraphIterator<String, DefaultWeightedEdge> iterator = new BreadthFirstIterator<String, DefaultWeightedEdge>(graph,"Xiaoyong Jiang");
+        while (iterator.hasNext())
+        {
+            Log.d(TAG, iterator.next());
+        }
+
     }
 
     @Override

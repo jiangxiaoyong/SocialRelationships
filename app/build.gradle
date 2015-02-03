@@ -22,8 +22,12 @@ repositories { mavenCentral() }
 
 
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
+    compile fileTree(include: ['*.jar'], dir: 'libs')
     compile 'com.android.support:appcompat-v7:21.0.3'
     compile 'com.facebook.android:facebook-android-sdk:3.21.1'
-
+    compile files('lib/jgrapht-core-0.9.0.jar')
+    compile files('lib/jgrapht-ext-0.9.0.jar')
+    compile files('lib/jgrapht-ext-0.9.0-uber.jar')
+    compile files('lib/jgraphx-2.0.0.1.jar')
+    compile files('lib/jgraph-5.13.0.0.jar')
 }
