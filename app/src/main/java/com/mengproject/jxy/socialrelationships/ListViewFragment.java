@@ -273,7 +273,7 @@ public class ListViewFragment extends Fragment {
 
     private void makeRelationshipRequest(final Session session){
 
-        new Request(session, "me/photos/uploaded",getRequestParameters(), HttpMethod.GET, new Request.Callback()
+        new Request(session, "me/photos/uploaded/",getRequestParameters(), HttpMethod.GET, new Request.Callback()
         {
             @Override
             public void onCompleted(Response response)
@@ -283,6 +283,8 @@ public class ListViewFragment extends Fragment {
                 // Process the returned response
                 GraphObject graphObject = response.getGraphObject();
                 if (graphObject != null) {
+
+                    JSONObject next = (JSONObject) graphObject.getProperty("paging");
                     if (graphObject.getProperty("data") != null) {
 
                         //parse the JSON data and store in data structure
@@ -359,6 +361,7 @@ public class ListViewFragment extends Fragment {
 
 
     //get specific tagged photos
+
     private Bundle getRequestParameters()
     {
         Bundle parameters = new Bundle(2);
@@ -392,6 +395,7 @@ public class ListViewFragment extends Fragment {
             for(int i = 0; i < outmostArray.length(); i++)
             {
                 JSONObject obj_of_outmostArray = (JSONObject) outmostArray.get(i);
+                System.out.println("aaa " + outmostArray.length());
                 Log.d(TAG, "object of outmost array" + obj_of_outmostArray.toString());
 
                 //Store the coordinates of people in ONE photo
