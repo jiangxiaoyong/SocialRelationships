@@ -39,7 +39,9 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -75,11 +77,14 @@ public class ListViewFragment extends Fragment {
     private TextView userNameView;
     private String hostUserName;
 
+    List<List<CoordinateOfOneTag>> all_photos_cooridinates = new ArrayList<List<CoordinateOfOneTag>>();
+    List<String> all_names = new ArrayList<String>();    //Array list to store the name of all people appeared in all photos
     Map<String, Map<String, Double>> all_friends_relativity = null;
     SortedSet<Map.Entry<String,Double>> sortedFriends = null;
     ListView theListView;
     ArrayAdapter<Friend> myAdapter;
 
+    static int page_counter = 0;
 
     //Number of vertices
     static int size = 10;
@@ -229,9 +234,15 @@ public class ListViewFragment extends Fragment {
     private void onSessionStateChange(final Session session, SessionState state, Exception exception) {
         if (session != null && session.isOpened()) {
             Log.d(TAG, "Logged in...");
-            // Get the user's data.
+            /*
+                Get the user's data.
+              */
             makeUserInfoRequest(session);
-            makeRelationshipRequest(session);
+
+            /*
+                Get the user's relativity based on all uploaded photos and 'photos of you'
+             */
+            makeRelationshipRequest(session, "me/photos/uploaded/", null);
 
 
         }else if (state.isClosed()) {
@@ -271,9 +282,9 @@ public class ListViewFragment extends Fragment {
         request.executeAsync();
     }
 
-    private void makeRelationshipRequest(final Session session){
+    private void makeRelationshipRequest(final Session session, String photoPath, String nextPage){
 
-        new Request(session, "me/photos/uploaded/",getRequestParameters(), HttpMethod.GET, new Request.Callback()
+        new Request(session, photoPath, getRequestParameters(nextPage), HttpMethod.GET, new Request.Callback()
         {
             @Override
             public void onCompleted(Response response)
@@ -282,13 +293,60 @@ public class ListViewFragment extends Fragment {
                 Log.i(TAG, "Response Result: " + response.toString());
                 // Process the returned response
                 GraphObject graphObject = response.getGraphObject();
-                if (graphObject != null) {
+                if (graphObject != null)
+                {
 
-                    JSONObject next = (JSONObject) graphObject.getProperty("paging");
-                    if (graphObject.getProperty("data") != null) {
+                    if (graphObject.getProperty("data") != null)
+                    {
+                        //parse the JSON data and store in data structure
+                        parseJSONData(graphObject);
+
+                    }
+
+                    /*
+                        Check if the response contains pagination
+                     */
+                    JSONObject pagingObj = (JSONObject) graphObject.getProperty("paging");
+                    boolean nextPageOrNot = pagingObj.has("next");
+
+                    if (pagingObj!= null && nextPageOrNot)
+                    {
+                        /*
+                            The response contains next page, continue to request next page
+                         */
+                        try {
+
+                            String nextPageToken = extractNextPageToken(pagingObj.getString("next"));
+                            System.out.println("next page token " + nextPageToken);
+                            makeRelationshipRequest(session, "me/photos/uploaded/", nextPageToken);
+                            page_counter ++;
+
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        } catch (UnsupportedEncodingException e) {
+                            e.printStackTrace();
+                        }
+
+
+                    }
+                    else if (pagingObj != null)
+                    {
+                        /*
+                            no next page
+                         */
+
+                        /*
+                            Further calculate the distance between two tags
+                        */
+                        List<List<RelativityOfTwoTags>> relativity_AllPhotos = findDistanceBetweenTwoTags(all_photos_cooridinates);
+
+                        /*
+                            summation of relativity between two tags of all photos
+                         */
+                        Map<String, Map<String, Double>> summation_relativity = summationOfRelativity(all_names, relativity_AllPhotos);
 
                         //parse the JSON data and store in data structure
-                        ListViewFragment.this.all_friends_relativity = parseJSONData(graphObject);
+                        ListViewFragment.this.all_friends_relativity = summation_relativity;
                         Map<String, Double> friends = all_friends_relativity.get(hostUserName);
 
                         /*
@@ -298,14 +356,50 @@ public class ListViewFragment extends Fragment {
                         if (hostUserName != null && all_friends_relativity != null)
                         {
                             populateDataToListView(friends);
+                            Toast.makeText(getActivity(),
+                                    "Total request pages =  " + page_counter, Toast.LENGTH_LONG)
+                                    .show();
                         }
-
                     }
                 }
 
             }
         }).executeAsync();
 
+
+
+    }
+
+    private String extractNextPageToken(String nextLink) throws UnsupportedEncodingException {
+
+        String delims = "[&]+";
+        String subString = "after";
+        String [] tokens = nextLink.split(delims);
+        int index = 0;
+
+
+
+        for (int i = 0; i < tokens.length; i++)
+        {
+            String string = tokens[i];
+            if (string.contains(subString))
+            {
+                index = i;
+                break;
+            }
+        }
+
+        //decode or convert the percent encoding character, = sign, %3D
+        String result = java.net.URLDecoder.decode(tokens[index], "UTF-8");
+        if(tokens[index] != null)
+        {
+            String[] str = result.split("=", 2);
+            return str[1];
+
+        }
+        else{
+            return null;
+        }
     }
 
     private void populateDataToListView( Map<String, Double> friends) {
@@ -362,27 +456,29 @@ public class ListViewFragment extends Fragment {
 
     //get specific tagged photos
 
-    private Bundle getRequestParameters()
+    private Bundle getRequestParameters(String pageNext)
     {
-        Bundle parameters = new Bundle(2);
+        Bundle parameters = new Bundle(0);
         parameters.putString("fields", "tags");
+        parameters.putString("limit", "25");
+
+        if (pageNext != null)
+        {
+            parameters.putString("after",pageNext);
+
+        }
         return parameters;
     }
 
     /*
         parse JSON data for each tagged photo, and store them in ArrayList
      */
-    private Map<String, Map<String, Double>> parseJSONData(GraphObject graphObject){
+    private void parseJSONData(GraphObject graphObject){
 
         // Get the data, parse info to get the key/value info
         JSONObject jsonObject = graphObject
                 .getInnerJSONObject();
 
-        //This is big array list to hold the coordinates of all photos
-        List<List<CoordinateOfOneTag>> all_photos_cooridinates = new ArrayList<List<CoordinateOfOneTag>>();
-
-        //Array list to store the name of all people appeared in all photos
-        List<String> all_names = new ArrayList<String>();
 
         try {
             JSONArray outmostArray = jsonObject
@@ -470,18 +566,6 @@ public class ListViewFragment extends Fragment {
         } catch (JSONException e) {
             e.printStackTrace();
         }
-
-        /*
-            Further calculate the distance between two tags
-         */
-        List<List<RelativityOfTwoTags>> relativity_AllPhotos = findDistanceBetweenTwoTags(all_photos_cooridinates);
-
-        /*
-            summation of relativity between two tags of all photos
-         */
-        Map<String, Map<String, Double>> summation_relativity = summationOfRelativity(all_names, relativity_AllPhotos);
-
-        return summation_relativity;
 
     }
 
@@ -888,12 +972,13 @@ public class ListViewFragment extends Fragment {
             I thought it should call onSessionStateChange
         */
 
+        /*
         Session session = Session.getActiveSession();
         if (session != null &&
                 (session.isOpened() || session.isClosed()) ) {
             onSessionStateChange(session, session.getState(), null);
         }
-
+        */
 
         uiHelper.onResume();
 
