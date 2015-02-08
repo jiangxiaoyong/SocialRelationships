@@ -40,6 +40,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.UnsupportedEncodingException;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -49,6 +50,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeMap;
@@ -78,11 +80,15 @@ public class ListViewFragment extends Fragment {
     private String hostUserName;
 
     List<List<CoordinateOfOneTag>> all_photos_cooridinates = new ArrayList<List<CoordinateOfOneTag>>();
-    List<String> all_names = new ArrayList<String>();    //Array list to store the name of all people appeared in all photos
+    List<String> all_names = null;    //Array list to store the name of all people appeared in all photos
+    List<String> all_scanned_photos = null;
     Map<String, Map<String, Double>> all_friends_relativity = null;
     SortedSet<Map.Entry<String,Double>> sortedFriends = null;
     ListView theListView;
     ArrayAdapter<Friend> myAdapter;
+    boolean photosOfYouDone = false; // indicate that all pages of album 'Photos of you' have been fetched
+    boolean uploadedPhotosDone = false; // indicate that all pages of all user uploaded photos have been fetched
+    boolean response_have_photo_data = false; //indicate that the response JASON array is empty
 
     static int page_counter = 0;
 
@@ -100,6 +106,10 @@ public class ListViewFragment extends Fragment {
 
     public ListViewFragment(){
 
+    }
+
+    public enum photoCategory{
+        photosOfYou, uploadedPhotos
     }
 
     @Override
@@ -169,6 +179,7 @@ public class ListViewFragment extends Fragment {
                 /*
                     figure out which friend has been clicked
                  */
+
                 int counter = 0;
                 String friendName = null;
                 Iterator it = sortedFriends.iterator();
@@ -188,6 +199,7 @@ public class ListViewFragment extends Fragment {
                 /*
                     start new activity to show desired friend's relativity
                  */
+
                 TreeMap<String, Double> friends = (TreeMap<String, Double>) all_friends_relativity.get(friendName);
                 Intent friendRelationship = new Intent(getActivity(), FriendRelationship.class);
                 friendRelationship.putExtra("desired_friend",friendName);
@@ -242,7 +254,11 @@ public class ListViewFragment extends Fragment {
             /*
                 Get the user's relativity based on all uploaded photos and 'photos of you'
              */
-            makeRelationshipRequest(session, "me/photos/uploaded/", null);
+            all_names = new ArrayList<String>();
+            all_scanned_photos = new ArrayList<String>();
+
+            makeRelationshipRequest(session,"me/photos/uploaded/", null, photoCategory.uploadedPhotos );
+            makeRelationshipRequest(session,"me/photos/", null, photoCategory.photosOfYou);
 
 
         }else if (state.isClosed()) {
@@ -272,17 +288,23 @@ public class ListViewFragment extends Fragment {
 
                                 //get host user name
                                 hostUserName = user.getName();
+
+                                //call display friend relativity in list view
+                                showFriendsRelativity();
+
                             }
                         }
                         if (response.getError() != null) {
                             // Handle errors, will do so later.
+                            Log.d(TAG, "strange bug");
                         }
                     }
                 });
         request.executeAsync();
     }
 
-    private void makeRelationshipRequest(final Session session, String photoPath, String nextPage){
+    private void makeRelationshipRequest(final Session session, final String photoPath, String nextPage, final photoCategory p_category){
+
 
         new Request(session, photoPath, getRequestParameters(nextPage), HttpMethod.GET, new Request.Callback()
         {
@@ -296,18 +318,35 @@ public class ListViewFragment extends Fragment {
                 if (graphObject != null)
                 {
 
-                    if (graphObject.getProperty("data") != null)
-                    {
-                        //parse the JSON data and store in data structure
-                        parseJSONData(graphObject);
+                    JSONObject jsonObject = graphObject.getInnerJSONObject();
+                    int response_JsonArray_len = 0;
 
+                    try {
+                        JSONArray outmostArray = jsonObject.getJSONArray("data");
+                        response_JsonArray_len = outmostArray.length();
+
+                        if (graphObject.getProperty("data") != null && response_JsonArray_len != 0)
+                        {
+                            //parse the JSON data and store in data structure
+                            parseJSONData(graphObject);
+
+                        }
+
+                    } catch (JSONException e) {
+                        e.printStackTrace();
                     }
+
 
                     /*
                         Check if the response contains pagination
                      */
                     JSONObject pagingObj = (JSONObject) graphObject.getProperty("paging");
-                    boolean nextPageOrNot = pagingObj.has("next");
+                    boolean nextPageOrNot = false;
+                    if (pagingObj != null)
+                    {
+                        nextPageOrNot = pagingObj.has("next");
+
+                    }
 
                     if (pagingObj!= null && nextPageOrNot)
                     {
@@ -318,7 +357,7 @@ public class ListViewFragment extends Fragment {
 
                             String nextPageToken = extractNextPageToken(pagingObj.getString("next"));
                             System.out.println("next page token " + nextPageToken);
-                            makeRelationshipRequest(session, "me/photos/uploaded/", nextPageToken);
+                            makeRelationshipRequest(session, photoPath, nextPageToken, p_category);
                             page_counter ++;
 
                         } catch (JSONException e) {
@@ -329,46 +368,87 @@ public class ListViewFragment extends Fragment {
 
 
                     }
-                    else if (pagingObj != null)
+                    else
                     {
-                        /*
-                            no next page
+                         /*
+                            reach here means no next page, or end of page
                          */
-
-                        /*
-                            Further calculate the distance between two tags
-                        */
-                        List<List<RelativityOfTwoTags>> relativity_AllPhotos = findDistanceBetweenTwoTags(all_photos_cooridinates);
-
-                        /*
-                            summation of relativity between two tags of all photos
-                         */
-                        Map<String, Map<String, Double>> summation_relativity = summationOfRelativity(all_names, relativity_AllPhotos);
-
-                        //parse the JSON data and store in data structure
-                        ListViewFragment.this.all_friends_relativity = summation_relativity;
-                        Map<String, Double> friends = all_friends_relativity.get(hostUserName);
-
-                        /*
-                            Due to Async request of user info and tag
-                            So we have to ensure both host user name and all relativity have beed filled
-                         */
-                        if (hostUserName != null && all_friends_relativity != null)
+                        if (response_JsonArray_len != 0)
                         {
-                            populateDataToListView(friends);
-                            Toast.makeText(getActivity(),
-                                    "Total request pages =  " + page_counter, Toast.LENGTH_LONG)
-                                    .show();
+                            /*
+                                flag there indicating at least either 'Photos Of You' and 'uploaded photos'
+                                is not empty, so that list view can show friends relativity
+                             */
+
+                            response_have_photo_data = true;
                         }
+
+                        if (p_category == photoCategory.photosOfYou)
+                        {
+                            photosOfYouDone = true;
+                        }
+                        else if(p_category == photoCategory.uploadedPhotos)
+                        {
+                            uploadedPhotosDone = true;
+                        }
+
                     }
+
+                        showFriendsRelativity();
+
                 }
 
             }
         }).executeAsync();
 
+    }
+
+    private void showFriendsRelativity() {
+
+        if (hostUserName != null && photosOfYouDone == true && uploadedPhotosDone == true && response_have_photo_data == true )
+        {
+
+             /*
+                Further calculate the distance between two tags
+             */
+            List<List<RelativityOfTwoTags>> relativity_AllPhotos = findDistanceBetweenTwoTags(all_photos_cooridinates);
+
+            /*
+                summation of relativity between two tags of all photos
+             */
+            Map<String, Map<String, Double>> summation_relativity = summationOfRelativity(all_names, relativity_AllPhotos);
+
+            //parse the JSON data and store in data structure
+            ListViewFragment.this.all_friends_relativity = summation_relativity;
+            Map<String, Double> friends = all_friends_relativity.get(hostUserName);
+            /*
+                Due to Async request of user info and tag
+                So we have to ensure both host user name and all relativity have beed filled
+             */
+            if (friends == null)
+            {
+                Toast.makeText(getActivity(),
+                        ":( Seems you don't have photos tagged on you", Toast.LENGTH_LONG)
+                        .show();
+            }
+            if (hostUserName != null && all_friends_relativity != null && friends != null)
+            {
+                populateDataToListView(friends);
+                Toast.makeText(getActivity(),
+                        "Total request pages =  " + page_counter, Toast.LENGTH_LONG)
+                        .show();
+            }
+        }
+        else if (hostUserName != null && photosOfYouDone == true && uploadedPhotosDone == true && response_have_photo_data == false)
+        {
+            Toast.makeText(getActivity(),
+                    ":( Seems you don't have photos tagged on you", Toast.LENGTH_LONG)
+                    .show();
+        }
 
 
     }
+
 
     private String extractNextPageToken(String nextLink) throws UnsupportedEncodingException {
 
@@ -376,8 +456,6 @@ public class ListViewFragment extends Fragment {
         String subString = "after";
         String [] tokens = nextLink.split(delims);
         int index = 0;
-
-
 
         for (int i = 0; i < tokens.length; i++)
         {
@@ -416,9 +494,9 @@ public class ListViewFragment extends Fragment {
         {
             Map.Entry<String, Double> entry = (Map.Entry<String, Double>) it.next();
             String name = entry.getKey();
-            Number relativity = entry.getValue();
+            String relativity = new DecimalFormat("#0.000").format(entry.getValue());// specify precision of double value
 
-            Friend thefriend = new Friend(name, relativity);
+            Friend thefriend = new Friend(name, Double.parseDouble(relativity));
             arrayOfFriends.add(thefriend);
         }
         /*
@@ -502,48 +580,63 @@ public class ListViewFragment extends Fragment {
                     Due to some photos did not have any tags with it
                  */
                 JSONObject obj_of_tags = (JSONObject) obj_of_outmostArray.optJSONObject("tags");
+                String photo_id = obj_of_outmostArray.getString("id");
                 if (obj_of_tags != null)
                 {
                     Log.d(TAG, "object of tags" + obj_of_tags.toString());
 
                     JSONArray array_of_tags =  obj_of_tags.getJSONArray("data");
                     Log.d(TAG, "tag data" + array_of_tags.toString());
-
-                    /*
-                      find tagged people in ONE photo
-                    */
-                    int tag_counter = 0;
-                    for(int j = 0; j < array_of_tags.length(); j++)
-                    {
-                        JSONObject  object = (JSONObject) array_of_tags.get(j);
-                        String name = (String) object.get("name");
-                        Number x = (Number) object.get("x");
-                        Number y = (Number) object.get("y");
-                        Log.d(TAG, "specific name and coordinates  " + name  +"  "+ x + "  " + y );
-
-
-                        CoordinateOfOneTag xy = new CoordinateOfOneTag(name, x, y);
-                        people_coordinates.add(xy);
-
-                        //store all name appeared in all photos
-                        addAllNames(name, all_names);
-
-                        tag_counter ++;
-                    }
+                    int tag_lenth = array_of_tags.length();
 
                     /*
                         Ignore the photo that has one tag
                      */
-                    if(tag_counter == 1)
+                    if (tag_lenth > 1)
                     {
-                        all_names.remove((all_names.size() - 1));
-                        continue;
+                        /*
+                            find tagged people in ONE photo
+                        */
+                        int tag_counter = 0;
+                        String potential_duplicate_name = "";
+
+                        //add photo id and check duplication
+                        boolean duplicated_photo = addScannedPhoto(photo_id);
+
+                        if (duplicated_photo == false)//it is NOT duplicated photos
+                        {
+                            for(int j = 0; j < array_of_tags.length(); j++)
+                            {
+
+                                JSONObject  object = (JSONObject) array_of_tags.get(j);
+                                String name = (String) object.get("name");
+                                Number x = (Number) object.get("x");
+                                Number y = (Number) object.get("y");
+                                Log.d(TAG, "specific name and coordinates  " + name  +"  "+ x + "  " + y );
+
+                                if(!potential_duplicate_name.equals(name))
+                                {
+                                    CoordinateOfOneTag xy = new CoordinateOfOneTag(name, x, y);
+                                    people_coordinates.add(xy);
+
+                                    //store all name appeared in all photos
+                                    List<String> allname = all_names;
+
+                                    addAllNames(name, all_names);
+
+                                    tag_counter ++;
+                                }
+
+                                potential_duplicate_name = name;
+
+                            }
+
+                            //add the coordinates of ONE photo to the big outer ArrayList
+                            all_photos_cooridinates.add(people_coordinates);
+                        }
+
                     }
-                    else
-                    {
-                        //add the coordinates of ONE photo to the big outer ArrayList
-                        all_photos_cooridinates.add(people_coordinates);
-                    }
+
 
                     /*
                         print out result for debug
@@ -563,11 +656,16 @@ public class ListViewFragment extends Fragment {
 
             }
 
+            List<String> allname = all_names;
+
+            Log.d(TAG, "");
+
         } catch (JSONException e) {
             e.printStackTrace();
         }
 
     }
+
 
     public Map<String, Map<String, Double>> summationOfRelativity (List<String> all_names,
                                                                            List<List<RelativityOfTwoTags>> relativity_AllPhotos)
@@ -603,6 +701,7 @@ public class ListViewFragment extends Fragment {
             }
 
             //take summation of relativity of all possible two-tags
+
             Map<String, Double> summationResult = takeSummation(nameToFind, target_relativity);
 
             summation_relativity.put(nameToFind, summationResult);
@@ -837,8 +936,11 @@ public class ListViewFragment extends Fragment {
         boolean found = false;
         for (String name_iterator : all_name)
         {
+
             if (name_iterator.equalsIgnoreCase(name))
             {
+                System.out.print(name_iterator);
+
                 found = true;
             }
         }
@@ -847,6 +949,32 @@ public class ListViewFragment extends Fragment {
         {
             all_name.add(name);
         }
+
+    }
+
+    /*
+        add this scanned photo id, in case of duplication of photos in
+        'Photo Of You' and 'uploaded photos'
+    */
+    private boolean addScannedPhoto(String photo_id) {
+
+        boolean found = false;
+        for (String id : all_scanned_photos)
+        {
+            if (id.equals(photo_id))
+            {
+                found = true;
+                return found;
+            }
+
+        }
+
+        if( found == false)
+        {
+            all_scanned_photos.add(photo_id);
+        }
+
+        return found;
 
     }
 
