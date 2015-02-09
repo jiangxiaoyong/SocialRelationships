@@ -9,6 +9,7 @@ import android.support.v4.app.FragmentTransaction;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.widget.Toast;
 
 import com.facebook.Session;
 import com.facebook.SessionState;
@@ -175,6 +176,10 @@ public class MainActivity extends FragmentActivity {
             // if the session is already open,
             // try to show the selection fragment
             showFragment(LISTVIEW, false);
+
+            Toast.makeText(this,
+                    "Analyzing you relationships, few seconds", Toast.LENGTH_LONG)
+                    .show();
         } else {
             // otherwise present the splash screen
             // and ask the person to login.

@@ -79,7 +79,7 @@ public class ListViewFragment extends Fragment {
     private TextView userNameView;
     private String hostUserName;
 
-    List<List<CoordinateOfOneTag>> all_photos_cooridinates = new ArrayList<List<CoordinateOfOneTag>>();
+    List<List<CoordinateOfOneTag>> all_photos_cooridinates = null;
     List<String> all_names = null;    //Array list to store the name of all people appeared in all photos
     List<String> all_scanned_photos = null;
     Map<String, Map<String, Double>> all_friends_relativity = null;
@@ -117,6 +117,7 @@ public class ListViewFragment extends Fragment {
         super.onCreate(savedInstanceState);
         uiHelper = new UiLifecycleHelper(getActivity(), callback);
         uiHelper.onCreate(savedInstanceState);
+
 
         /*
             claim that this fragment will participate receiving menu clicking
@@ -256,6 +257,7 @@ public class ListViewFragment extends Fragment {
              */
             all_names = new ArrayList<String>();
             all_scanned_photos = new ArrayList<String>();
+            all_photos_cooridinates = new ArrayList<List<CoordinateOfOneTag>>();
 
             makeRelationshipRequest(session,"me/photos/uploaded/", null, photoCategory.uploadedPhotos );
             makeRelationshipRequest(session,"me/photos/", null, photoCategory.photosOfYou);
@@ -993,7 +995,20 @@ public class ListViewFragment extends Fragment {
 
                 if (!session.isClosed()) {
                     session.closeAndClearTokenInformation();
-                    //clear your preferences if saved
+
+                    /*
+                        clear all saved data when logout
+                     */
+                    all_names.clear();
+                    all_scanned_photos.clear();
+                    all_photos_cooridinates.clear();
+                    all_friends_relativity.clear();
+                    sortedFriends.clear();
+                    photosOfYouDone = false;
+                    uploadedPhotosDone = false;
+                    response_have_photo_data = false;
+
+                    theListView.setAdapter(null);
                 }
             } else {
 
