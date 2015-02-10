@@ -6,6 +6,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.ImageView;
+import android.widget.Spinner;
 import android.widget.TextView;
 
 import org.w3c.dom.Text;
@@ -47,6 +48,7 @@ public class MyAdapter extends ArrayAdapter<Friend> {
 
             viewHolder.name = (TextView) convertView.findViewById(R.id.rowCellTextView1);
             viewHolder.relativity = (TextView) convertView.findViewById(R.id.rowCellTextView2);
+
 
             convertView.setTag(viewHolder);
         }

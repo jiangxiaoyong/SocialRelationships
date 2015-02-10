@@ -21,7 +21,7 @@ public class WelcomFragment extends Fragment {
         View view = inflater.inflate(R.layout.welcom,container, false);
 
         LoginButton authButton = (LoginButton) view.findViewById(R.id.login_button);
-        authButton.setReadPermissions(Arrays.asList("user_photos"));
+        authButton.setReadPermissions(Arrays.asList("user_photos", "user_about_me"));
 
         return view;
     }

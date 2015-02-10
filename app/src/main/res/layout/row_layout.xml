@@ -14,27 +14,28 @@
 
 
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:id="@+id/rowCellTextView1"
-                android:textSize="15sp"
-                android:padding="15dp"
-                android:textColor="#ffffff"
-                android:fontFamily="sans-serif-light"
-                />
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/rowCellTextView1"
+        android:textSize="15sp"
+        android:padding="15dp"
+        android:textColor="#ffffff"
+        android:fontFamily="sans-serif-light"
+        />
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:id="@+id/rowCellTextView2"
-                android:textSize="15sp"
-                android:padding="15dp"
-                android:textColor="#ffffff"
-                android:fontFamily="sans-serif-light"
-                android:gravity="right"
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:id="@+id/rowCellTextView2"
+        android:textSize="15sp"
+        android:padding="15dp"
+        android:textColor="#ffffff"
+        android:fontFamily="sans-serif-light"
+        android:gravity="right"
 
-                />
+        />
+
 
 
 </LinearLayout>

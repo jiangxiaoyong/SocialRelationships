@@ -177,9 +177,7 @@ public class MainActivity extends FragmentActivity {
             // try to show the selection fragment
             showFragment(LISTVIEW, false);
 
-            Toast.makeText(this,
-                    "Analyzing you relationships, few seconds", Toast.LENGTH_LONG)
-                    .show();
+
         } else {
             // otherwise present the splash screen
             // and ask the person to login.
@@ -213,10 +211,15 @@ public class MainActivity extends FragmentActivity {
         uiHelper.onDestroy();
     }
 
+    @Override
+    protected void onStart() {
+        super.onStart();
+    }
+
     /*
-        when user press home button or this activity was killed by system
-        or switch to other app by long pressing home button
-     */
+            when user press home button or this activity was killed by system
+            or switch to other app by long pressing home button
+         */
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);

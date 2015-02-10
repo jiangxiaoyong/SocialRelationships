@@ -1,11 +1,9 @@
 package com.mengproject.jxy.socialrelationships;
 
 import android.content.Intent;
-import android.graphics.Color;
-import android.graphics.drawable.ColorDrawable;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
-import android.support.v4.app.ListFragment;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -15,9 +13,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.ListAdapter;
 import android.widget.ListView;
-import android.widget.SimpleAdapter;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -31,9 +28,7 @@ import com.facebook.model.GraphObject;
 import com.facebook.model.GraphUser;
 import com.facebook.widget.ProfilePictureView;
 
-import org.jgrapht.generate.CompleteGraphGenerator;
 import org.jgrapht.traverse.BreadthFirstIterator;
-import org.jgrapht.traverse.DepthFirstIterator;
 import org.jgrapht.traverse.GraphIterator;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -42,29 +37,19 @@ import org.json.JSONObject;
 import java.io.UnsupportedEncodingException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-import org.jgraph.*;
-import org.jgraph.graph.*;
-
 import org.jgrapht.*;
-import org.jgrapht.ext.*;
 import org.jgrapht.graph.*;
 
 // resolve ambiguity
-import org.jgrapht.graph.DefaultEdge;
+
 
 /**
  * Created by jxy on 23/01/15.
@@ -86,6 +71,9 @@ public class ListViewFragment extends Fragment {
     SortedSet<Map.Entry<String,Double>> sortedFriends = null;
     ListView theListView;
     ArrayAdapter<Friend> myAdapter;
+    //LinearLayout progressBar = null;
+    ProgressBar progressBar = null;
+
     boolean photosOfYouDone = false; // indicate that all pages of album 'Photos of you' have been fetched
     boolean uploadedPhotosDone = false; // indicate that all pages of all user uploaded photos have been fetched
     boolean response_have_photo_data = false; //indicate that the response JASON array is empty
@@ -118,11 +106,21 @@ public class ListViewFragment extends Fragment {
         uiHelper = new UiLifecycleHelper(getActivity(), callback);
         uiHelper.onCreate(savedInstanceState);
 
-
         /*
             claim that this fragment will participate receiving menu clicking
          */
         setHasOptionsMenu(true);
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
     }
 
     @Override
@@ -153,11 +151,19 @@ public class ListViewFragment extends Fragment {
             makeUserInfoRequest(session);
         }
 
+        /*
+        Toast.makeText(getActivity(),
+                "Analyzing you relationships, few seconds", Toast.LENGTH_LONG)
+                .show();
+        */
+
+        progressBar = (ProgressBar) view.findViewById(R.id.pbHeaderProgress);
+        //progressBar = (LinearLayout)view.findViewById(R.id.linlaHeaderProgress);
+
 
         /*
             fill in list view
          */
-
         ArrayList<Friend> arrayOfFriends = new ArrayList<Friend>();
 
        myAdapter =  new MyAdapter(getActivity(), arrayOfFriends);
@@ -173,9 +179,6 @@ public class ListViewFragment extends Fragment {
             @Override
             public void onItemClick(AdapterView<?> parent, View view,
                                     int position, long id) {
-                Toast.makeText(getActivity(),
-                        "Click ListItem Number " + position, Toast.LENGTH_LONG)
-                        .show();
 
                 /*
                     figure out which friend has been clicked
@@ -252,6 +255,8 @@ public class ListViewFragment extends Fragment {
               */
             makeUserInfoRequest(session);
 
+            progressBar.setVisibility(View.VISIBLE);
+
             /*
                 Get the user's relativity based on all uploaded photos and 'photos of you'
              */
@@ -306,6 +311,7 @@ public class ListViewFragment extends Fragment {
     }
 
     private void makeRelationshipRequest(final Session session, final String photoPath, String nextPage, final photoCategory p_category){
+
 
 
         new Request(session, photoPath, getRequestParameters(nextPage), HttpMethod.GET, new Request.Callback()
@@ -381,7 +387,6 @@ public class ListViewFragment extends Fragment {
                                 flag there indicating at least either 'Photos Of You' and 'uploaded photos'
                                 is not empty, so that list view can show friends relativity
                              */
-
                             response_have_photo_data = true;
                         }
 
@@ -396,7 +401,7 @@ public class ListViewFragment extends Fragment {
 
                     }
 
-                        showFriendsRelativity();
+                    showFriendsRelativity();
 
                 }
 
@@ -405,10 +410,11 @@ public class ListViewFragment extends Fragment {
 
     }
 
-    private void showFriendsRelativity() {
+    class ShowResultsAsync extends AsyncTask< Void, Void, Map<String, Map<String, Double>>  >
+    {
 
-        if (hostUserName != null && photosOfYouDone == true && uploadedPhotosDone == true && response_have_photo_data == true )
-        {
+        @Override
+        protected Map<String, Map<String, Double>> doInBackground(Void... params) {
 
              /*
                 Further calculate the distance between two tags
@@ -419,6 +425,23 @@ public class ListViewFragment extends Fragment {
                 summation of relativity between two tags of all photos
              */
             Map<String, Map<String, Double>> summation_relativity = summationOfRelativity(all_names, relativity_AllPhotos);
+            return summation_relativity;
+        }
+
+        protected void onPreExecute (){
+            Log.d("PreExceute", "On pre Exceute......");
+
+        }
+
+        protected void onProgressUpdate(Integer...a){
+            Log.d(TAG,"You are in progress update ... ");
+        }
+
+        @Override
+        protected void onPostExecute(Map<String, Map<String, Double>> summation_relativity) {
+            super.onPostExecute(summation_relativity);
+
+            Log.d(TAG,"on Post Execute");
 
             //parse the JSON data and store in data structure
             ListViewFragment.this.all_friends_relativity = summation_relativity;
@@ -432,20 +455,39 @@ public class ListViewFragment extends Fragment {
                 Toast.makeText(getActivity(),
                         ":( Seems you don't have photos tagged on you", Toast.LENGTH_LONG)
                         .show();
+
+                progressBar.setVisibility(View.INVISIBLE);
+
             }
             if (hostUserName != null && all_friends_relativity != null && friends != null)
             {
                 populateDataToListView(friends);
-                Toast.makeText(getActivity(),
-                        "Total request pages =  " + page_counter, Toast.LENGTH_LONG)
-                        .show();
+
             }
+        }
+
+    }
+
+
+    private void showFriendsRelativity() {
+
+        if (hostUserName != null && photosOfYouDone == true && uploadedPhotosDone == true && response_have_photo_data == true )
+        {
+            /*
+                Due to large amount of calculation, do the computation in background
+                and then show the relativity results
+             */
+            new ShowResultsAsync().execute();
+
         }
         else if (hostUserName != null && photosOfYouDone == true && uploadedPhotosDone == true && response_have_photo_data == false)
         {
             Toast.makeText(getActivity(),
                     ":( Seems you don't have photos tagged on you", Toast.LENGTH_LONG)
                     .show();
+
+            progressBar.setVisibility(View.INVISIBLE);
+
         }
 
 
@@ -514,6 +556,12 @@ public class ListViewFragment extends Fragment {
 
         myAdapter =  new MyAdapter(getActivity(), arrayOfFriends);
         theListView.setAdapter(myAdapter);
+
+        /*
+            hide the pregress bar
+         */
+        progressBar.setVisibility(View.INVISIBLE);
+
     }
 
     /*
@@ -954,6 +1002,7 @@ public class ListViewFragment extends Fragment {
 
     }
 
+
     /*
         add this scanned photo id, in case of duplication of photos in
         'Photo Of You' and 'uploaded photos'
@@ -990,15 +1039,37 @@ public class ListViewFragment extends Fragment {
             /*
                 logout from facebook
             */
-            Session session = Session.getActiveSession();
-            if (session != null) {
+            closeThisApp();
 
-                if (!session.isClosed()) {
-                    session.closeAndClearTokenInformation();
+            return true;
+            
+        }
+        //else if (id == R.id.action_two){
+            
+            /*
+                show relativity of second order
+             */
+          //  secondOrderRelativity();
+
+         //   return true;
+       // }
+
+        return super.onOptionsItemSelected(item);
+    }
+
+    private void closeThisApp() {
+
+        Session session = Session.getActiveSession();
+        if (session != null) {
+
+            if (!session.isClosed()) {
+                session.closeAndClearTokenInformation();
 
                     /*
                         clear all saved data when logout
                      */
+                if (all_friends_relativity.size() != 0){
+
                     all_names.clear();
                     all_scanned_photos.clear();
                     all_photos_cooridinates.clear();
@@ -1010,29 +1081,18 @@ public class ListViewFragment extends Fragment {
 
                     theListView.setAdapter(null);
                 }
-            } else {
 
-                session = new Session(getActivity());
-                Session.setActiveSession(session);
-
-                session.closeAndClearTokenInformation();
-                //clear your preferences if saved
 
             }
-            return true;
-            
-        }
-        else if (id == R.id.action_two){
-            
-            /*
-                show relativity of second order
-             */
-            secondOrderRelativity();
+        } else {
 
-            return true;
-        }
+            session = new Session(getActivity());
+            Session.setActiveSession(session);
 
-        return super.onOptionsItemSelected(item);
+            session.closeAndClearTokenInformation();
+            //clear your preferences if saved
+
+        }
     }
 
     private void secondOrderRelativity() {
@@ -1143,6 +1203,8 @@ public class ListViewFragment extends Fragment {
     public void onDestroy() {
         super.onDestroy();
         uiHelper.onDestroy();
+
+        closeThisApp();
     }
 
 }

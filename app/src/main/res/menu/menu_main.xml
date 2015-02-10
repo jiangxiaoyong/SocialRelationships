@@ -5,8 +5,8 @@
         android:title="@string/action_one"
         app:showAsAction="ifRoom" />
     <!-- Settings, should always be in the overflow -->
-    <item android:id="@+id/action_two"
+    <!--item android:id="@+id/action_two"
         android:title="@string/action_two"
-        app:showAsAction="ifRoom" />
+        app:showAsAction="ifRoom" /-->
 
 </menu>
