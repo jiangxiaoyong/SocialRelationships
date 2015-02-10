@@ -648,10 +648,11 @@ public class ListViewFragment extends Fragment {
                             find tagged people in ONE photo
                         */
                         int tag_counter = 0;
-                        String potential_duplicate_name = "";
 
                         //add photo id and check duplication
                         boolean duplicated_photo = addScannedPhoto(photo_id);
+                        boolean duplicated_name = false;
+                        List<String> DuplicatedName = new ArrayList<String>();
 
                         if (duplicated_photo == false)//it is NOT duplicated photos
                         {
@@ -664,25 +665,24 @@ public class ListViewFragment extends Fragment {
                                 Number y = (Number) object.get("y");
                                 Log.d(TAG, "specific name and coordinates  " + name  +"  "+ x + "  " + y );
 
-                                if(!potential_duplicate_name.equals(name))
+                                duplicated_name = findDuplicatedName(name, DuplicatedName);
+
+                                if( duplicated_name == false)
                                 {
                                     CoordinateOfOneTag xy = new CoordinateOfOneTag(name, x, y);
+                                    addAllNames(name, all_names);//store all name appeared in all photos
+
+                                    //store all people coordinates appeared in one photo
                                     people_coordinates.add(xy);
-
-                                    //store all name appeared in all photos
-                                    List<String> allname = all_names;
-
-                                    addAllNames(name, all_names);
 
                                     tag_counter ++;
                                 }
-
-                                potential_duplicate_name = name;
 
                             }
 
                             //add the coordinates of ONE photo to the big outer ArrayList
                             all_photos_cooridinates.add(people_coordinates);
+
                         }
 
                     }
@@ -980,7 +980,7 @@ public class ListViewFragment extends Fragment {
     /*
         add all friend name appeared in all photos, and check duplication
      */
-    public void addAllNames (String name, List<String> all_name)
+    public boolean addAllNames (String name, List<String> all_name)
     {
         //check duplication
         boolean found = false;
@@ -989,9 +989,8 @@ public class ListViewFragment extends Fragment {
 
             if (name_iterator.equalsIgnoreCase(name))
             {
-                System.out.print(name_iterator);
-
                 found = true;
+                return found;
             }
         }
 
@@ -1000,8 +999,30 @@ public class ListViewFragment extends Fragment {
             all_name.add(name);
         }
 
+        return found;
+
     }
 
+
+    private boolean findDuplicatedName(String name, List<String> duplicatedName) {
+
+        boolean found = false;
+        for (String str : duplicatedName)
+        {
+            if (str.equalsIgnoreCase(name))
+            {
+                found = true;
+                return found;
+            }
+        }
+
+        if (found == false)
+        {
+
+            duplicatedName.add(name);
+        }
+        return found;
+    }
 
     /*
         add this scanned photo id, in case of duplication of photos in
