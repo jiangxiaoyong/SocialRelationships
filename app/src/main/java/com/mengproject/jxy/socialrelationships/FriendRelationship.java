@@ -88,7 +88,7 @@ public class FriendRelationship extends Activity {
             String name = entry.getKey();
             Number relativity = entry.getValue();
 
-            Friend thefriend = new Friend(name, relativity);
+            Friend thefriend = new Friend(name, relativity,null);
             arrayOfFriends.add(thefriend);
         }
 

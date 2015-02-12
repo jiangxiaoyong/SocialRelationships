@@ -1,6 +1,8 @@
 package com.mengproject.jxy.socialrelationships;
 
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
@@ -28,16 +30,29 @@ import com.facebook.model.GraphObject;
 import com.facebook.model.GraphUser;
 import com.facebook.widget.ProfilePictureView;
 
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.HttpStatus;
+import org.apache.http.StatusLine;
+import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.entity.BufferedHttpEntity;
+import org.apache.http.impl.client.DefaultHttpClient;
 import org.jgrapht.traverse.BreadthFirstIterator;
 import org.jgrapht.traverse.GraphIterator;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -69,9 +84,9 @@ public class ListViewFragment extends Fragment {
     List<String> all_scanned_photos = null;
     Map<String, Map<String, Double>> all_friends_relativity = null;
     SortedSet<Map.Entry<String,Double>> sortedFriends = null;
+    Map<String, String>taggable_friends = null;
     ListView theListView;
     ArrayAdapter<Friend> myAdapter;
-    //LinearLayout progressBar = null;
     ProgressBar progressBar = null;
 
     boolean photosOfYouDone = false; // indicate that all pages of album 'Photos of you' have been fetched
@@ -158,7 +173,6 @@ public class ListViewFragment extends Fragment {
         */
 
         progressBar = (ProgressBar) view.findViewById(R.id.pbHeaderProgress);
-        //progressBar = (LinearLayout)view.findViewById(R.id.linlaHeaderProgress);
 
 
         /*
@@ -263,15 +277,22 @@ public class ListViewFragment extends Fragment {
             all_names = new ArrayList<String>();
             all_scanned_photos = new ArrayList<String>();
             all_photos_cooridinates = new ArrayList<List<CoordinateOfOneTag>>();
+            taggable_friends = new HashMap<String, String>();
 
             makeRelationshipRequest(session,"me/photos/uploaded/", null, photoCategory.uploadedPhotos );
             makeRelationshipRequest(session,"me/photos/", null, photoCategory.photosOfYou);
+
+            /*
+                Get the user's taggable friends list
+             */
+            makeTaggableFriendsRequest(session, "me/taggable_friends");
 
 
         }else if (state.isClosed()) {
             Log.d(TAG, "Logged out...");
         }
     }
+
 
     private void makeUserInfoRequest(final Session session) {
         // Make an API call to get user data and define a
@@ -309,6 +330,45 @@ public class ListViewFragment extends Fragment {
                 });
         request.executeAsync();
     }
+
+    private void makeTaggableFriendsRequest(Session session, String friendsPath) {
+
+        new Request(session, friendsPath, null, HttpMethod.GET, new Request.Callback()
+        {
+            @Override
+            public void onCompleted(Response response) {
+
+                Log.i(TAG, "Taggabel friends Response Result: " + response.toString());
+                // Process the returned response
+                GraphObject graphObject = response.getGraphObject();
+                if (graphObject != null)
+                {
+                    JSONObject jsonObject = graphObject.getInnerJSONObject();
+                    int response_JsonArray_len = 0;
+
+                    try {
+                        JSONArray outmostArray = jsonObject.getJSONArray("data");
+                        response_JsonArray_len = outmostArray.length();
+
+                        if (graphObject.getProperty("data") != null && response_JsonArray_len != 0)
+                        {
+                            //parse the JSON data and store in data structure
+                            parseTaggableFriendsJSONData(graphObject);
+
+                        }
+
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+            }
+        }).executeAsync();
+
+    }
+
+
+
 
     private void makeRelationshipRequest(final Session session, final String photoPath, String nextPage, final photoCategory p_category){
 
@@ -539,8 +599,10 @@ public class ListViewFragment extends Fragment {
             Map.Entry<String, Double> entry = (Map.Entry<String, Double>) it.next();
             String name = entry.getKey();
             String relativity = new DecimalFormat("#0.000").format(entry.getValue());// specify precision of double value
+            String url = taggable_friends.get(name);
 
-            Friend thefriend = new Friend(name, Double.parseDouble(relativity));
+
+            Friend thefriend = new Friend(name, Double.parseDouble(relativity), url);
             arrayOfFriends.add(thefriend);
         }
         /*
@@ -557,12 +619,14 @@ public class ListViewFragment extends Fragment {
         myAdapter =  new MyAdapter(getActivity(), arrayOfFriends);
         theListView.setAdapter(myAdapter);
 
+
         /*
             hide the pregress bar
          */
         progressBar.setVisibility(View.INVISIBLE);
 
     }
+
 
     /*
         sort tree map
@@ -599,6 +663,47 @@ public class ListViewFragment extends Fragment {
     }
 
     /*
+        parse taggable friends jason data to fill friend's profile image in list view
+     */
+    private void parseTaggableFriendsJSONData(GraphObject graphObject) {
+
+        // Get the data, parse info to get the key/value info
+        JSONObject jsonObject = graphObject
+                .getInnerJSONObject();
+
+        try {
+            JSONArray outmostArray = jsonObject
+                    .getJSONArray("data");
+            Log.d(TAG, "outmostArray" + outmostArray.toString());
+
+            /*
+                loop tagged photos
+             */
+            for(int i = 0; i < outmostArray.length(); i++)
+            {
+                JSONObject obj_of_outmostArray = (JSONObject) outmostArray.get(i);
+                System.out.println("aaa " + outmostArray.length());
+                Log.d(TAG, "object of outmost array" + obj_of_outmostArray.toString());
+
+                JSONObject obj_of_picture = (JSONObject) obj_of_outmostArray.optJSONObject("picture");
+                String taggable_friend_name = obj_of_outmostArray.getString("name");
+                if (obj_of_picture != null)
+                {
+                    JSONObject profile_picture_info = obj_of_picture.getJSONObject("data");
+                    String url = (String) profile_picture_info.get("url");
+
+                    taggable_friends.put(taggable_friend_name, url);
+                }
+            }
+            Log.d(TAG,"");
+
+
+        }catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /*
         parse JSON data for each tagged photo, and store them in ArrayList
      */
     private void parseJSONData(GraphObject graphObject){
@@ -606,7 +711,6 @@ public class ListViewFragment extends Fragment {
         // Get the data, parse info to get the key/value info
         JSONObject jsonObject = graphObject
                 .getInnerJSONObject();
-
 
         try {
             JSONArray outmostArray = jsonObject
