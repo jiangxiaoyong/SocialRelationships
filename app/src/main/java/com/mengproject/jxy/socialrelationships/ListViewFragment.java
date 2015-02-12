@@ -222,6 +222,13 @@ public class ListViewFragment extends Fragment {
                 Intent friendRelationship = new Intent(getActivity(), FriendRelationship.class);
                 friendRelationship.putExtra("desired_friend",friendName);
                 friendRelationship.putExtra("friends", friends);
+                HashMap<String, String> taggable = (HashMap<String, String>) taggable_friends;
+                friendRelationship.putExtra("taggable_friends", taggable);
+                String url = taggable_friends.get(friendName);
+                if (url != null)
+                {
+                    friendRelationship.putExtra("url", url);
+                }
                 startActivity(friendRelationship);
             }
         });

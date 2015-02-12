@@ -3,18 +3,36 @@ package com.mengproject.jxy.socialrelationships;
 import android.app.Activity;
 import android.app.ListActivity;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.os.AsyncTask;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.ArrayAdapter;
+import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.facebook.widget.ProfilePictureView;
 
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.HttpStatus;
+import org.apache.http.StatusLine;
+import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.entity.BufferedHttpEntity;
+import org.apache.http.impl.client.DefaultHttpClient;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.lang.ref.WeakReference;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -32,6 +50,7 @@ public class FriendRelationship extends Activity {
 
     private ProfilePictureView profilePictureView;
     private TextView userNameView;
+    private ImageView imageview;
     ListView theListView;
     ArrayAdapter<Friend> myAdapter;
     SortedSet<Map.Entry<String,Double>> sortedFriends = null;
@@ -47,8 +66,8 @@ public class FriendRelationship extends Activity {
          *  set user profile picture and user name
          */
         // Find the user's profile picture custom view
-        profilePictureView = (ProfilePictureView)findViewById(R.id.friend_profile_pic);
-        profilePictureView.setCropped(true);
+
+        imageview = (ImageView)findViewById(R.id.rowCellImageView);
 
         // Find the user's name view
         userNameView = (TextView)findViewById(R.id.friend_name);
@@ -60,6 +79,16 @@ public class FriendRelationship extends Activity {
         Intent intent = getIntent();
         String desired_friend_name =  intent.getExtras().getString("desired_friend");
         Map<String, Double> friends = (Map<String, Double>) intent.getExtras().getSerializable("friends");
+        Map<String, String> taggable = (Map<String, String>) intent.getExtras().getSerializable("taggable_friends");
+        String url = (String) intent.getExtras().getSerializable("url");
+
+        /*
+            this url is used for fetch the profile image of the desired friend
+         */
+        if (url != null)
+        {
+            new friendProfileImageAsyncTask().execute(url);
+        }
 
         /*
             set user name
@@ -67,12 +96,56 @@ public class FriendRelationship extends Activity {
         userNameView.setText(desired_friend_name);
 
         theListView = (ListView)findViewById(R.id.list);
-        populateDataToListView(friends);
+        populateDataToListView(friends, taggable);
 
 
     }
 
-    private void populateDataToListView(Map<String, Double> friends) {
+    class friendProfileImageAsyncTask extends AsyncTask<String, String, Bitmap> {
+
+
+        @Override
+        protected Bitmap doInBackground(String... uri) {
+            HttpClient httpclient = new DefaultHttpClient();
+            HttpResponse response;
+            String responseString = null;
+            Bitmap bitmap = null;
+            try {
+                response = httpclient.execute(new HttpGet(uri[0]));
+                StatusLine statusLine = response.getStatusLine();
+                if(statusLine.getStatusCode() == HttpStatus.SC_OK){
+
+                    HttpEntity entity = response.getEntity();
+                    BufferedHttpEntity b_entity = new BufferedHttpEntity(entity);
+                    InputStream input = b_entity.getContent();
+
+                    bitmap = BitmapFactory.decodeStream(input);
+
+                } else{
+                    //Closes the connection.
+                    response.getEntity().getContent().close();
+                    throw new IOException(statusLine.getReasonPhrase());
+                }
+            } catch (ClientProtocolException e) {
+                //TODO Handle problems..
+            } catch (IOException e) {
+                //TODO Handle problems..
+            }
+            return bitmap;
+        }
+
+        @Override
+        protected void onPostExecute(Bitmap bitmap) {
+            super.onPostExecute(bitmap);
+            //Do anything with response..
+            if (imageview != null){
+                imageview.setImageBitmap(bitmap);
+            }
+
+        }
+    }
+
+    private void populateDataToListView(Map<String, Double> friends, Map<String, String> taggable_friends) {
 
         List<Friend> arrayOfFriends = new ArrayList<Friend>();
 
@@ -86,9 +159,11 @@ public class FriendRelationship extends Activity {
         {
             Map.Entry<String, Double> entry = (Map.Entry<String, Double>) it.next();
             String name = entry.getKey();
-            Number relativity = entry.getValue();
+            String relativity = new DecimalFormat("#0.000").format(entry.getValue());// specify precision of double value
+            String url = taggable_friends.get(name);
 
-            Friend thefriend = new Friend(name, relativity,null);
+
+            Friend thefriend = new Friend(name, Double.parseDouble(relativity), url);
             arrayOfFriends.add(thefriend);
         }
 
