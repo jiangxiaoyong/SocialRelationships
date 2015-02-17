@@ -15,11 +15,14 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.facebook.FacebookException;
+import com.facebook.FacebookOperationCanceledException;
 import com.facebook.HttpMethod;
 import com.facebook.Request;
 import com.facebook.Response;
@@ -29,6 +32,7 @@ import com.facebook.UiLifecycleHelper;
 import com.facebook.model.GraphObject;
 import com.facebook.model.GraphUser;
 import com.facebook.widget.ProfilePictureView;
+import com.facebook.widget.WebDialog;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -78,6 +82,8 @@ public class ListViewFragment extends Fragment {
     private ProfilePictureView profilePictureView;
     private TextView userNameView;
     private String hostUserName;
+    private Button shareButton;
+
 
     List<List<CoordinateOfOneTag>> all_photos_cooridinates = null;
     List<String> all_names = null;    //Array list to store the name of all people appeared in all photos
@@ -185,6 +191,16 @@ public class ListViewFragment extends Fragment {
        theListView = (ListView)view.findViewById(R.id.list);
        theListView.setAdapter(myAdapter);
 
+        /*
+            set up click listener to share button
+         */
+        shareButton = (Button) view.findViewById(R.id.shareButton);
+        shareButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                publishFeedDialog();
+            }
+        });
 
         /*
             set up the click listener for listview
@@ -1225,6 +1241,57 @@ public class ListViewFragment extends Fragment {
             //clear your preferences if saved
 
         }
+    }
+
+    private void publishFeedDialog() {
+
+        Bundle params = new Bundle();
+        params.putString("name", "Social Relationships");
+        params.putString("caption", "Extracting from facebook photos");
+        params.putString("description", "Exploring you and your friends social relationships based on facebook tagged photos. Please comment the accuracy e.g. Accurate, Average, Inaccurate");
+        params.putString("link", "https://developers.facebook.com/");
+        params.putString("picture", "https://raw.github.com/fbsamples/ios-3.x-howtos/master/Images/iossdk_logo.png");
+
+        WebDialog feedDialog = (
+                new WebDialog.FeedDialogBuilder(getActivity(),
+                        Session.getActiveSession(),
+                        params))
+                .setOnCompleteListener(new WebDialog.OnCompleteListener() {
+
+                    @Override
+                    public void onComplete(Bundle values,
+                                           FacebookException error) {
+                        if (error == null) {
+                            // When the story is posted, echo the success
+                            // and the post Id.
+                            final String postId = values.getString("post_id");
+                            if (postId != null) {
+                                Toast.makeText(getActivity(),
+                                        "Posted story, id: "+postId,
+                                        Toast.LENGTH_SHORT).show();
+                            } else {
+                                // User clicked the Cancel button
+                                Toast.makeText(getActivity().getApplicationContext(),
+                                        "Publish cancelled",
+                                        Toast.LENGTH_SHORT).show();
+                            }
+                        } else if (error instanceof FacebookOperationCanceledException) {
+                            // User clicked the "x" button
+                            Toast.makeText(getActivity().getApplicationContext(),
+                                    "Publish cancelled",
+                                    Toast.LENGTH_SHORT).show();
+                        } else {
+                            // Generic, ex: network error
+                            Toast.makeText(getActivity().getApplicationContext(),
+                                    "Error posting story",
+                                    Toast.LENGTH_SHORT).show();
+                        }
+                    }
+
+                })
+                .build();
+        feedDialog.show();
+
     }
 
     private void secondOrderRelativity() {
