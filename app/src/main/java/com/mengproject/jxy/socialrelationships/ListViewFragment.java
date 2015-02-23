@@ -1247,8 +1247,8 @@ public class ListViewFragment extends Fragment {
 
         Bundle params = new Bundle();
         params.putString("name", "Social Relationships");
-        params.putString("caption", "Extracting from facebook photos");
-        params.putString("description", "Exploring you and your friends social relationships based on facebook tagged photos. Please comment the accuracy e.g. Accurate, Average, Inaccurate");
+        params.putString("caption", "Please comment the accuracy e.g. Accurate, Average, Inaccurate");
+        params.putString("description", "Exploring you and your friends social relationships based on facebook tagged photos.");
         params.putString("link", "https://developers.facebook.com/");
         params.putString("picture", "https://raw.github.com/fbsamples/ios-3.x-howtos/master/Images/iossdk_logo.png");
 
