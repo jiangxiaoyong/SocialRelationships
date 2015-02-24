@@ -1266,9 +1266,11 @@ public class ListViewFragment extends Fragment {
                             // and the post Id.
                             final String postId = values.getString("post_id");
                             if (postId != null) {
+                                /*
                                 Toast.makeText(getActivity(),
                                         "Posted story, id: "+postId,
                                         Toast.LENGTH_SHORT).show();
+                                        */
                             } else {
                                 // User clicked the Cancel button
                                 Toast.makeText(getActivity().getApplicationContext(),
