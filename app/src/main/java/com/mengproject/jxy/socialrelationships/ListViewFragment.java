@@ -1249,7 +1249,7 @@ public class ListViewFragment extends Fragment {
         params.putString("name", "Social Relationships");
         params.putString("caption", "Please comment the accuracy e.g. Accurate, Average, Inaccurate");
         params.putString("description", "Exploring you and your friends social relationships based on facebook tagged photos.");
-        params.putString("link", "https://developers.facebook.com/");
+        params.putString("link", "https://play.google.com/store/apps/details?id=com.mengproject.jxy.socialrelationships&hl=en");
         params.putString("picture", "https://raw.github.com/fbsamples/ios-3.x-howtos/master/Images/iossdk_logo.png");
 
         WebDialog feedDialog = (
@@ -1266,11 +1266,12 @@ public class ListViewFragment extends Fragment {
                             // and the post Id.
                             final String postId = values.getString("post_id");
                             if (postId != null) {
-                                /*
-                                Toast.makeText(getActivity(),
-                                        "Posted story, id: "+postId,
+
+                                // User clicked the Cancel button
+                                Toast.makeText(getActivity().getApplicationContext(),
+                                        "Successful published",
                                         Toast.LENGTH_SHORT).show();
-                                        */
+
                             } else {
                                 // User clicked the Cancel button
                                 Toast.makeText(getActivity().getApplicationContext(),
