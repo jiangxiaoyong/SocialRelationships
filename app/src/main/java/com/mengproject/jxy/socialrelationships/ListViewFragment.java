@@ -95,6 +95,9 @@ public class ListViewFragment extends Fragment {
     ArrayAdapter<Friend> myAdapter;
     ProgressBar progressBar = null;
 
+    Map<String, Map<String, Double>> SO_all_friends_relativity = null;
+
+
     boolean photosOfYouDone = false; // indicate that all pages of album 'Photos of you' have been fetched
     boolean uploadedPhotosDone = false; // indicate that all pages of all user uploaded photos have been fetched
     boolean response_have_photo_data = false; //indicate that the response JASON array is empty
@@ -526,27 +529,34 @@ public class ListViewFragment extends Fragment {
 
             Log.d(TAG,"on Post Execute");
 
-            //parse the JSON data and store in data structure
-            ListViewFragment.this.all_friends_relativity = summation_relativity;
-            Map<String, Double> friends = all_friends_relativity.get(hostUserName);
+            showResults(summation_relativity);
+
+        }
+
+    }
+
+    private void showResults(Map<String, Map<String, Double>> summation_relativity) {
+
+        //parse the JSON data and store in data structure
+        ListViewFragment.this.all_friends_relativity = summation_relativity;
+        Map<String, Double> friends = all_friends_relativity.get(hostUserName);
             /*
                 Due to Async request of user info and tag
                 So we have to ensure both host user name and all relativity have beed filled
              */
-            if (friends == null)
-            {
-                Toast.makeText(getActivity(),
-                        ":( Seems you don't have photos tagged on you", Toast.LENGTH_LONG)
-                        .show();
+        if (friends == null)
+        {
+            Toast.makeText(getActivity(),
+                    ":( Seems you don't have photos tagged on you", Toast.LENGTH_LONG)
+                    .show();
 
-                progressBar.setVisibility(View.INVISIBLE);
+            progressBar.setVisibility(View.INVISIBLE);
 
-            }
-            if (hostUserName != null && all_friends_relativity != null && friends != null)
-            {
-                populateDataToListView(friends);
+        }
+        if (hostUserName != null && all_friends_relativity != null && friends != null)
+        {
+            populateDataToListView(friends);
 
-            }
         }
 
     }
@@ -881,6 +891,8 @@ public class ListViewFragment extends Fragment {
 
             Map<String, Double> summationResult = takeSummation(nameToFind, target_relativity);
 
+
+
             summation_relativity.put(nameToFind, summationResult);
 
         }
@@ -892,6 +904,10 @@ public class ListViewFragment extends Fragment {
     {
         Map<String, Double> sum_of_relativity = new TreeMap<String, Double>(String.CASE_INSENSITIVE_ORDER);
 
+        if (nameToFind.equals("Meg Bearor"))
+        {
+            Log.d(TAG,"");
+        }
         for (int i = 0; i < target_relativity.size(); i ++)
         {
             RelativityOfTwoTags r_iterator = target_relativity.get(i);
@@ -903,6 +919,10 @@ public class ListViewFragment extends Fragment {
             String friendName0 = null;
 
             friendName0 = findFriendName(nameToFind,temp_name);
+            if (friendName0.equals("Shaun Poon"))
+            {
+                Log.d(TAG,"");
+            }
 
             //check to see if the name already stored in hash map
             Number sum = sum_of_relativity.get(friendName0);
@@ -920,10 +940,13 @@ public class ListViewFragment extends Fragment {
 
                     if (friendName0.equalsIgnoreCase(friendName1))
                     {
+                        Number num = search_itr.getNormalizedValue();
+                        Double dou = search_itr.getNormalizedValue().doubleValue();
                         sumRelativity += search_itr.getNormalizedValue().doubleValue();
                         Log.d(TAG, "");
                     }
                 }
+
 
                 sum_of_relativity.put(friendName0, sumRelativity);
             }
@@ -982,6 +1005,10 @@ public class ListViewFragment extends Fragment {
                     Number distance = Math.sqrt(Math.pow(Math.abs(x1.doubleValue()-x0.doubleValue()),2) +
                                                 Math.pow(Math.abs(y1.doubleValue()-y0.doubleValue()), 2));
 
+                    if (distance.doubleValue() == 0)
+                    {
+                        continue;
+                    }
                     String nameOfTwoTag = new StringBuilder().append(name0).append(",").append(name1).toString();
 
                     RelativityOfTwoTags r = new RelativityOfTwoTags(nameOfTwoTag, distance);
@@ -1177,6 +1204,9 @@ public class ListViewFragment extends Fragment {
 
     }
 
+    /*
+        This is the menu options in the action bar
+     */
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
 
@@ -1192,15 +1222,15 @@ public class ListViewFragment extends Fragment {
             return true;
             
         }
-        //else if (id == R.id.action_two){
+        else if (id == R.id.action_two){
             
             /*
                 show relativity of second order
              */
-          //  secondOrderRelativity();
+            secondOrderRelativity();
 
-         //   return true;
-       // }
+            return true;
+        }
 
         return super.onOptionsItemSelected(item);
     }
@@ -1297,14 +1327,116 @@ public class ListViewFragment extends Fragment {
 
     }
 
+    /*********************************************************************************************************
+
+        Code Below deal with second order relationships
+
+     *********************************************************************************************************/
+
     private void secondOrderRelativity() {
 
+        //constructSeondOrderGraph();
+
         /*
-            construct the graph of all friends relativity
+            calculation of direct relationships
          */
-        constructSeondOrderGraph();
+        secondOrderDirect();
+
+        /*
+            calculation of indirect relationships
+         */
+        secondOrderIndirect();
+
+        showResults(SO_all_friends_relativity);
 
     }
+
+    public void secondOrderDirect(){
+
+        /*
+            store new second order relativity of all friends
+         */
+        SO_all_friends_relativity = new TreeMap<String, Map<String, Double>>(String.CASE_INSENSITIVE_ORDER);
+
+        /*
+            loop all people name, perform second order for each people with direct relationships
+         */
+        for (Map.Entry<String, Map<String, Double>> entry : all_friends_relativity.entrySet())
+        {
+            Log.d(TAG, "name " + entry.getKey() );
+            String current_name = entry.getKey().toString();
+
+            /*
+                    construct new all_friends_relativity graph
+                    and write into new second order relativity
+             */
+            Map<String, Double> SO_treemap_one_friend = new TreeMap<String, Double>(String.CASE_INSENSITIVE_ORDER);
+
+            /*
+                Retrieve the friend list of current people
+             */
+            Map<String, Double> friends_list = all_friends_relativity.get(current_name);
+            for(Map.Entry<String, Double> friends_R : friends_list.entrySet())
+            {
+
+                String target_name = friends_R.getKey();
+                Double relativity_target = friends_R.getValue();
+
+                Double SO_relativity = relativity_target;
+
+
+                /*
+                    loop the remaining friends, except target friend
+                    to see if remaining friends have direct relationship with the target
+                 */
+                for(Map.Entry<String, Double> remaining_friends : friends_list.entrySet())
+                {
+                    String friend_name = remaining_friends.getKey();
+                    Double relativity_friend = remaining_friends.getValue();
+
+
+                    /*
+                        if current loop friend name equal to target friend name, ignore it.
+                     */
+                    if(friend_name.equals(target_name))
+                    {
+                        continue;
+                    }
+
+                    /*
+                        find the friend list of remaining friends
+                        to see if the friend list containg target friend name
+                     */
+                    Map<String, Double> friend_list_remaining = all_friends_relativity.get(friend_name);
+                    if(friend_list_remaining.containsKey(target_name))
+                    {
+                        /*
+                            retrieve the relativity
+                         */
+                        Double relativity_more = friend_list_remaining.get(target_name);
+                        Double temp_ratio = (relativity_more*relativity_friend) / (relativity_friend + relativity_more);
+                        SO_relativity += temp_ratio;
+                    }
+
+                }
+                Log.d(TAG, "SO_relativity = " + SO_relativity);
+
+                //record new second order into the tree map of this specific friend relativity
+                SO_treemap_one_friend.put(target_name, SO_relativity);
+            }
+
+            //record new second order relativity for all people
+            SO_all_friends_relativity.put(current_name, SO_treemap_one_friend);
+
+        }
+        Log.d(TAG, "");
+
+    }
+
+    public void secondOrderIndirect(){
+
+    }
+
 
     private void constructSeondOrderGraph() {
 
@@ -1359,6 +1491,7 @@ public class ListViewFragment extends Fragment {
         }
 
     }
+
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
