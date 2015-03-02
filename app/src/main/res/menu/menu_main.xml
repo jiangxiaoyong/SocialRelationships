@@ -1,12 +1,17 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
       xmlns:app="http://schemas.android.com/apk/res-auto" >
     <!-- Search, should appear as action button -->
+
+    <!-- Settings, should always be in the overflow -->
     <item android:id="@+id/action_one"
         android:title="@string/action_one"
         app:showAsAction="ifRoom" />
-    <!-- Settings, should always be in the overflow -->
     <item android:id="@+id/action_two"
         android:title="@string/action_two"
         app:showAsAction="ifRoom" />
+    <item android:id="@+id/action_three"
+        android:title="@string/action_three"
+        app:showAsAction="ifRoom" />
+
 
 </menu>

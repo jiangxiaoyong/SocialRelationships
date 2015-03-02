@@ -904,10 +904,7 @@ public class ListViewFragment extends Fragment {
     {
         Map<String, Double> sum_of_relativity = new TreeMap<String, Double>(String.CASE_INSENSITIVE_ORDER);
 
-        if (nameToFind.equals("Meg Bearor"))
-        {
-            Log.d(TAG,"");
-        }
+
         for (int i = 0; i < target_relativity.size(); i ++)
         {
             RelativityOfTwoTags r_iterator = target_relativity.get(i);
@@ -919,10 +916,7 @@ public class ListViewFragment extends Fragment {
             String friendName0 = null;
 
             friendName0 = findFriendName(nameToFind,temp_name);
-            if (friendName0.equals("Shaun Poon"))
-            {
-                Log.d(TAG,"");
-            }
+
 
             //check to see if the name already stored in hash map
             Number sum = sum_of_relativity.get(friendName0);
@@ -940,10 +934,7 @@ public class ListViewFragment extends Fragment {
 
                     if (friendName0.equalsIgnoreCase(friendName1))
                     {
-                        Number num = search_itr.getNormalizedValue();
-                        Double dou = search_itr.getNormalizedValue().doubleValue();
                         sumRelativity += search_itr.getNormalizedValue().doubleValue();
-                        Log.d(TAG, "");
                     }
                 }
 
@@ -1214,12 +1205,7 @@ public class ListViewFragment extends Fragment {
 
         if (id == R.id.action_one) {
 
-            /*
-                logout from facebook
-            */
-            closeThisApp();
 
-            return true;
             
         }
         else if (id == R.id.action_two){
@@ -1228,6 +1214,15 @@ public class ListViewFragment extends Fragment {
                 show relativity of second order
              */
             secondOrderRelativity();
+
+            return true;
+        }
+        else if (id == R.id.action_three)
+        {
+            /*
+                logout from facebook
+            */
+            closeThisApp();
 
             return true;
         }
@@ -1429,12 +1424,90 @@ public class ListViewFragment extends Fragment {
             SO_all_friends_relativity.put(current_name, SO_treemap_one_friend);
 
         }
-        Log.d(TAG, "");
 
     }
 
     public void secondOrderIndirect(){
 
+        /*
+            find friends that do not have direct relationship with current showing people
+            for each people
+         */
+        for (Map.Entry<String, Map<String, Double>> entry : all_friends_relativity.entrySet())
+        {
+            String current_name = entry.getKey().toString();
+
+
+            /*
+                Retrieve the friends list of current people
+                and get the friends list of indirect relationships
+             */
+            List<String> indirect_friends = findIndirectFriendsList(current_name);
+
+            /*
+                loop indirect friend list and calculate second order
+             */
+            Map<String, Double> friends_list = all_friends_relativity.get(current_name);
+            for (String indirect_name : indirect_friends)
+            {
+                Double r_indirect = 0.0;
+                /*
+                    loop friends list to see if the list contain this specific friend name
+                 */
+                for (Map.Entry<String, Double> iterator : friends_list.entrySet())
+                {
+                    String friend_name = iterator.getKey();
+                    Double r1 = iterator.getValue();
+
+                    /*
+                        acquire the friend list of friends
+                     */
+                    Map<String, Double> friends_list_more = all_friends_relativity.get(friend_name);
+                    if (friends_list_more.containsKey(indirect_name))
+                    {
+                        Double r2= friends_list_more.get(indirect_name);
+                        Double temp_ratio = (r1 * r2) / (r1 + r2);
+                        r_indirect += temp_ratio;
+                    }
+
+                }
+                /*
+                    record this new indirect relationships of second order for current people
+                 */
+                if(r_indirect != 0.0)
+                {
+                    Map<String, Double> SO_friends_list = SO_all_friends_relativity.get(current_name);
+                    SO_friends_list.put(indirect_name, r_indirect);
+                }
+
+
+            }
+
+        }
+    }
+
+    private List<String> findIndirectFriendsList(String current_name) {
+
+        Map<String, Double> friends_list = all_friends_relativity.get(current_name);
+        List<String> indirect_friends = new ArrayList<String>();
+
+        for(Map.Entry<String, Map<String, Double>> entry : all_friends_relativity.entrySet())
+        {
+            String friend_name = entry.getKey();
+
+            /*
+                ignore the name of current computing people
+             */
+            if (friend_name.equals(current_name))
+            {
+                continue;
+            }
+            if (!friends_list.containsKey(friend_name))// find the indirect friend
+            {
+                indirect_friends.add(friend_name);
+            }
+        }
+        return indirect_friends;
     }
 
 
