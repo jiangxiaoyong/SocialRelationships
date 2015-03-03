@@ -6,11 +6,24 @@
               android:layout_height="match_parent"
               android:background="#EE000000">
 
-            <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    <TextView
+
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="New Text"
+        android:id="@+id/current_alg"
+        android:layout_gravity="top|right"
+        android:textColor="#fc9870"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        android:fontFamily="sans-serif-light"
+        />
+
+    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
                 xmlns:facebook="http://schemas.android.com/apk/res-auto"
                 android:layout_width="fill_parent"
                 android:layout_height="0dp"
-                android:layout_marginTop="20dp"
+                android:layout_marginTop="0dp"
                 android:gravity="center_horizontal"
                 android:orientation="horizontal"
                 android:layout_weight="0.2">
@@ -34,7 +47,8 @@
                     android:fontFamily="sans-serif-light"
                     />
 
-            </LinearLayout>
+
+    </LinearLayout>
 
 
 

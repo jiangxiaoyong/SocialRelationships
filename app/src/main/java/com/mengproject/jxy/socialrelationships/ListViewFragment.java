@@ -83,6 +83,7 @@ public class ListViewFragment extends Fragment {
     private TextView userNameView;
     private String hostUserName;
     private Button shareButton;
+    private TextView current_alg;
 
 
     List<List<CoordinateOfOneTag>> all_photos_cooridinates = null;
@@ -103,6 +104,7 @@ public class ListViewFragment extends Fragment {
     boolean response_have_photo_data = false; //indicate that the response JASON array is empty
 
     static int page_counter = 0;
+    algorithm alg;
 
     //Number of vertices
     static int size = 10;
@@ -122,6 +124,10 @@ public class ListViewFragment extends Fragment {
 
     public enum photoCategory{
         photosOfYou, uploadedPhotos
+    }
+
+    public enum algorithm {
+        firstOrder, secondOrder
     }
 
     @Override
@@ -167,6 +173,8 @@ public class ListViewFragment extends Fragment {
 
         // Find the user's name view
         userNameView = (TextView) view.findViewById(R.id.selection_user_name);
+        // Find the text view of current algorithm
+        current_alg = (TextView) view.findViewById(R.id.current_alg);
 
         // Check for an open session
         Session session = Session.getActiveSession();
@@ -253,6 +261,10 @@ public class ListViewFragment extends Fragment {
         });
 
 
+        /*
+            set current type of algorithm
+         */
+        alg = algorithm.firstOrder;
 
         return view;
     }
@@ -297,26 +309,36 @@ public class ListViewFragment extends Fragment {
 
             progressBar.setVisibility(View.VISIBLE);
 
-            /*
-                Get the user's relativity based on all uploaded photos and 'photos of you'
-             */
-            all_names = new ArrayList<String>();
-            all_scanned_photos = new ArrayList<String>();
-            all_photos_cooridinates = new ArrayList<List<CoordinateOfOneTag>>();
-            taggable_friends = new HashMap<String, String>();
+            firstOrderRelativity(session);
 
-            makeRelationshipRequest(session,"me/photos/uploaded/", null, photoCategory.uploadedPhotos );
-            makeRelationshipRequest(session,"me/photos/", null, photoCategory.photosOfYou);
-
-            /*
-                Get the user's taggable friends list
-             */
-            makeTaggableFriendsRequest(session, "me/taggable_friends");
 
 
         }else if (state.isClosed()) {
             Log.d(TAG, "Logged out...");
         }
+    }
+
+    private void firstOrderRelativity(Session session) {
+
+        if (alg == algorithm.firstOrder)
+        {
+            current_alg.setText("Algo : First Order");
+        }
+        /*
+            Get the user's relativity based on all uploaded photos and 'photos of you'
+         */
+        all_names = new ArrayList<String>();
+        all_scanned_photos = new ArrayList<String>();
+        all_photos_cooridinates = new ArrayList<List<CoordinateOfOneTag>>();
+        taggable_friends = new HashMap<String, String>();
+
+        makeRelationshipRequest(session,"me/photos/uploaded/", null, photoCategory.uploadedPhotos );
+        makeRelationshipRequest(session,"me/photos/", null, photoCategory.photosOfYou);
+
+        /*
+            Get the user's taggable friends list
+         */
+        makeTaggableFriendsRequest(session, "me/taggable_friends");
     }
 
 
@@ -1205,7 +1227,31 @@ public class ListViewFragment extends Fragment {
 
         if (id == R.id.action_one) {
 
+            if(alg != algorithm.firstOrder){
 
+                 /*
+                    clear all data stored in first order
+                    so that first order can be recompute
+                 */
+                all_names.clear();
+                all_scanned_photos.clear();
+                all_photos_cooridinates.clear();
+                all_friends_relativity.clear();
+                sortedFriends.clear();
+                photosOfYouDone = false;
+                uploadedPhotosDone = false;
+                response_have_photo_data = false;
+
+                Session session = Session.getActiveSession();
+
+                alg = algorithm.firstOrder;
+
+                progressBar.setVisibility(View.VISIBLE);
+                theListView.setAdapter(null);//clear list view when tranfer from second order to first order
+                firstOrderRelativity(session);
+            }
+
+            return true;
             
         }
         else if (id == R.id.action_two){
@@ -1213,7 +1259,20 @@ public class ListViewFragment extends Fragment {
             /*
                 show relativity of second order
              */
-            secondOrderRelativity();
+            if (alg != algorithm.secondOrder){
+
+                progressBar.setVisibility(View.VISIBLE);
+                theListView.setAdapter(null);
+
+                secondOrderRelativity();
+
+                alg = algorithm.secondOrder;
+                current_alg.setText("Algo : Second Order");
+
+
+
+
+            }
 
             return true;
         }
@@ -1272,7 +1331,7 @@ public class ListViewFragment extends Fragment {
 
         Bundle params = new Bundle();
         params.putString("name", "Social Relationships");
-        params.putString("caption", "Please comment the accuracy e.g. Accurate, Average, Inaccurate");
+        params.putString("caption", "Please comment the accuracy for algorithm of First order and Second Order e.g. Accurate, Average, Inaccurate");
         params.putString("description", "Exploring you and your friends social relationships based on facebook tagged photos.");
         params.putString("link", "https://play.google.com/store/apps/details?id=com.mengproject.jxy.socialrelationships&hl=en");
         params.putString("picture", "https://raw.github.com/fbsamples/ios-3.x-howtos/master/Images/iossdk_logo.png");
@@ -1332,17 +1391,8 @@ public class ListViewFragment extends Fragment {
 
         //constructSeondOrderGraph();
 
-        /*
-            calculation of direct relationships
-         */
-        secondOrderDirect();
 
-        /*
-            calculation of indirect relationships
-         */
-        secondOrderIndirect();
-
-        showResults(SO_all_friends_relativity);
+        new SecondOrderAsync().execute();
 
     }
 
@@ -1425,6 +1475,7 @@ public class ListViewFragment extends Fragment {
 
         }
 
+
     }
 
     public void secondOrderIndirect(){
@@ -1480,9 +1531,35 @@ public class ListViewFragment extends Fragment {
                     SO_friends_list.put(indirect_name, r_indirect);
                 }
 
-
             }
 
+        }
+
+    }
+
+    class SecondOrderAsync extends AsyncTask< Void, Void, Void >
+    {
+
+        @Override
+        protected Void doInBackground(Void... params) {
+
+         /*
+            calculation of direct relationships
+         */
+            secondOrderDirect();
+
+        /*
+            calculation of indirect relationships
+         */
+            secondOrderIndirect();
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Void aVoid) {
+            super.onPostExecute(aVoid);
+
+            showResults(SO_all_friends_relativity);
         }
     }
 
