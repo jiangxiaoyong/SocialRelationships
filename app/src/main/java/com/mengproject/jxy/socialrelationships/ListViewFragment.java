@@ -90,6 +90,7 @@ public class ListViewFragment extends Fragment {
     List<List<CoordinateOfOneTag>> all_photos_cooridinates = null;
     List<String> all_names = null;    //Array list to store the name of all people appeared in all photos
     List<String> all_scanned_photos = null;
+    List<String> all_photos = null;
     Map<String, Map<String, Double>> all_friends_relativity = null;
     SortedSet<Map.Entry<String,Double>> sortedFriends = null;
     Map<String, String>taggable_friends = null;
@@ -105,6 +106,9 @@ public class ListViewFragment extends Fragment {
     boolean response_have_photo_data = false; //indicate that the response JASON array is empty
 
     static int page_counter = 0;
+    static int total_photos = 0;
+    static int total_tagged_photos = 0;
+    static int photos_of_user = 0;
     algorithm alg;
 
     //Number of vertices
@@ -341,6 +345,7 @@ public class ListViewFragment extends Fragment {
          */
         all_names = new ArrayList<String>();
         all_scanned_photos = new ArrayList<String>();
+        all_photos = new ArrayList<String>();
         all_photos_cooridinates = new ArrayList<List<CoordinateOfOneTag>>();
         taggable_friends = new HashMap<String, String>();
 
@@ -591,6 +596,10 @@ public class ListViewFragment extends Fragment {
         {
             populateDataToListView(friends);
 
+            Toast.makeText(getActivity().getApplicationContext(),
+                    "total photos " + total_photos + "tagged photos " + total_tagged_photos + "you " + photos_of_user,
+                    Toast.LENGTH_SHORT).show();
+
         }
 
     }
@@ -802,6 +811,16 @@ public class ListViewFragment extends Fragment {
                  */
                 JSONObject obj_of_tags = (JSONObject) obj_of_outmostArray.optJSONObject("tags");
                 String photo_id = obj_of_outmostArray.getString("id");
+
+                /*
+                    counting the total number of processed photos
+                 */
+                boolean check_dup = checkPhotoDuplication(photo_id);
+                if (check_dup == false)
+                {
+                    total_photos ++;
+                }
+
                 if (obj_of_tags != null)
                 {
                     Log.d(TAG, "object of tags" + obj_of_tags.toString());
@@ -827,6 +846,8 @@ public class ListViewFragment extends Fragment {
 
                         if (duplicated_photo == false)//it is NOT duplicated photos
                         {
+                            total_tagged_photos++;
+
                             for(int j = 0; j < array_of_tags.length(); j++)
                             {
 
@@ -846,6 +867,11 @@ public class ListViewFragment extends Fragment {
                                     //store all people coordinates appeared in one photo
                                     people_coordinates.add(xy);
 
+                                    // counting photos that user was in it
+                                    if (name.equals(hostUserName))
+                                    {
+                                        photos_of_user ++;
+                                    }
                                     tag_counter ++;
                                 }
 
@@ -1230,6 +1256,31 @@ public class ListViewFragment extends Fragment {
     }
 
     /*
+        check duplicated photo including  'uploaded' and 'photos of you'
+        This is used for counting all photos that had been processed
+     */
+    private boolean checkPhotoDuplication(String photo_id){
+
+        boolean found = false;
+        for (String id : all_photos)
+        {
+            if (id.equals(photo_id))
+            {
+                found = true;
+                return found;
+            }
+
+        }
+
+        if( found == false)
+        {
+            all_photos.add(photo_id);
+        }
+
+        return found;
+    }
+
+    /*
         This is the menu options in the action bar
      */
     @Override
@@ -1247,12 +1298,16 @@ public class ListViewFragment extends Fragment {
                  */
                 all_names.clear();
                 all_scanned_photos.clear();
+                all_photos.clear();
                 all_photos_cooridinates.clear();
                 all_friends_relativity.clear();
                 sortedFriends.clear();
                 photosOfYouDone = false;
                 uploadedPhotosDone = false;
                 response_have_photo_data = false;
+                total_photos = 0;
+                total_tagged_photos = 0;
+                photos_of_user = 0;
 
                 Session session = Session.getActiveSession();
 
@@ -1316,12 +1371,16 @@ public class ListViewFragment extends Fragment {
 
                     all_names.clear();
                     all_scanned_photos.clear();
+                    all_photos.clear();
                     all_photos_cooridinates.clear();
                     all_friends_relativity.clear();
                     sortedFriends.clear();
                     photosOfYouDone = false;
                     uploadedPhotosDone = false;
                     response_have_photo_data = false;
+                    total_photos = 0;
+                    total_tagged_photos = 0;
+                    photos_of_user = 0;
 
                     theListView.setAdapter(null);
                 }
