@@ -64,27 +64,58 @@
     </ProgressBar>
 
 
-        <ListView
-            android:id="@+id/list"
-            android:layout_width="wrap_content"
-            android:layout_height ="0dp"
-            android:layout_weight="1"
-            ></ListView>
+    <ListView
+        android:id="@+id/list"
+        android:layout_width="wrap_content"
+        android:layout_height ="0dp"
+        android:layout_weight="1"
+        >
 
+    </ListView>
 
-    <Button
-        android:id="@+id/shareButton"
-        android:layout_width="match_parent"
+    <LinearLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        android:layout_width="fill_parent"
         android:layout_height="wrap_content"
-        android:textStyle="bold"
-        android:gravity="center"
-        android:layout_marginTop="30dp"
-        android:layout_weight="0.005"
-        android:text="@string/share"
-        android:textColor="#FFFFFF"
-        android:background="#3b5999"
-        android:fontFamily="sans-serif-light"
-        />
+        android:orientation="horizontal"
+        android:layout_gravity="center"
+        >
+
+        <Button
+            android:id="@+id/shareButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:textStyle="bold"
+            android:text="@string/share"
+            android:textColor="#FFFFFF"
+            android:background="@drawable/share_button"
+            android:fontFamily="sans-serif-light"
+            android:layout_weight="1"
+
+            />
+
+        <!--this is a split between two buttons-->
+        <TextView
+            android:id="@+id/centerPoint"
+            android:text=""
+            android:layout_width="5dp"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true" />
+
+        <Button
+            android:id="@+id/feedBackButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:textStyle="bold"
+            android:text="@string/feedback"
+            android:textColor="#FFFFFF"
+            android:background="@drawable/feedback_button"
+            android:fontFamily="sans-serif-light"
+            android:layout_weight="1" />
+
+    </LinearLayout>
+
+
 
 
 

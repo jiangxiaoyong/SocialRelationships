@@ -83,6 +83,7 @@ public class ListViewFragment extends Fragment {
     private TextView userNameView;
     private String hostUserName;
     private Button shareButton;
+    private Button feedBackButton;
     private TextView current_alg;
 
 
@@ -210,6 +211,17 @@ public class ListViewFragment extends Fragment {
             @Override
             public void onClick(View v) {
                 publishFeedDialog();
+            }
+        });
+
+        /*
+            set up click listener to send feedback button
+         */
+        feedBackButton = (Button) view.findViewById(R.id.feedBackButton);
+        feedBackButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                sendFeedback();
             }
         });
 
@@ -1379,6 +1391,21 @@ public class ListViewFragment extends Fragment {
                 .build();
         feedDialog.show();
 
+    }
+
+    private void sendFeedback() {
+
+        /* Create the Intent */
+        final Intent emailIntent = new Intent(android.content.Intent.ACTION_SEND);
+
+        /* Fill it with Data */
+        emailIntent.setType("plain/text");
+        emailIntent.putExtra(Intent.EXTRA_EMAIL, new String[]{"jiangxiaoyong904@gmail.com"});
+        emailIntent.putExtra(Intent.EXTRA_SUBJECT, "Subject");
+        emailIntent.putExtra(Intent.EXTRA_TEXT, "Text");
+
+        /* Send it off to the Activity-Chooser */
+        startActivity(Intent.createChooser(emailIntent, "Send mail..."));
     }
 
     /*********************************************************************************************************

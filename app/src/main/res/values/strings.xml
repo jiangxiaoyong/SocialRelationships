@@ -12,5 +12,6 @@
     <string name="hello_world">Hello world!</string>
     <string name="share">Share to Facebook</string>
     <string name="action_three">Log out</string>
+    <string name="feedback">Send us Feedback</string>
 
 </resources>
