@@ -205,7 +205,7 @@ public class ListViewFragment extends Fragment {
        myAdapter =  new MyAdapter(getActivity(), arrayOfFriends);
 
        theListView = (ListView)view.findViewById(R.id.list);
-       theListView.setAdapter(myAdapter);
+       //theListView.setAdapter(myAdapter);
 
         /*
             set up click listener to share button

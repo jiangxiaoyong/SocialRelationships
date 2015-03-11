@@ -124,6 +124,23 @@ public class MyAdapter extends ArrayAdapter<Friend> {
         }
     }
 
+    /*
+        limit the number of items showing in list view
+     */
+
+    @Override
+    public int getCount() {
+
+        if (super.getCount() >= 10)
+        {
+            return 10;
+        }
+        else
+        {
+            return super.getCount();
+        }
+    }
+
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
 
