@@ -91,6 +91,8 @@ public class ListViewFragment extends Fragment {
     List<String> all_names = null;    //Array list to store the name of all people appeared in all photos
     List<String> all_scanned_photos = null;
     List<String> all_photos = null;
+    List<String> top10_name_first = null;
+    List<String> top10_name_second = null;
     Map<String, Map<String, Double>> all_friends_relativity = null;
     SortedSet<Map.Entry<String,Double>> sortedFriends = null;
     Map<String, String>taggable_friends = null;
@@ -109,6 +111,7 @@ public class ListViewFragment extends Fragment {
     static int total_photos = 0;
     static int total_tagged_photos = 0;
     static int photos_of_user = 0;
+    static int total_tag = 0;
     algorithm alg;
 
     //Number of vertices
@@ -596,10 +599,11 @@ public class ListViewFragment extends Fragment {
         {
             populateDataToListView(friends);
 
+            /*
             Toast.makeText(getActivity().getApplicationContext(),
-                    "total photos " + total_photos + "tagged photos " + total_tagged_photos + "you " + photos_of_user,
+                    "total photos " + total_photos + "tagged photos " + total_tagged_photos + "you " + photos_of_user + "T " + total_tag,
                     Toast.LENGTH_SHORT).show();
-
+            */
         }
 
     }
@@ -665,6 +669,18 @@ public class ListViewFragment extends Fragment {
         List<Friend> arrayOfFriends = new ArrayList<Friend>();
 
         /*
+            store top 10 friends name
+         */
+        if (top10_name_first ==  null){
+            top10_name_first = new ArrayList<String>();
+        }
+
+        if (top10_name_second == null){
+            top10_name_second = new ArrayList<String>();
+        }
+        int limit = 10; // this limit the number of storing friends name to top 10
+
+        /*
             sort friend based on relativity descend order
          */
         sortedFriends = entriesSortedByValues(friends);
@@ -680,6 +696,27 @@ public class ListViewFragment extends Fragment {
 
             Friend thefriend = new Friend(name, Double.parseDouble(relativity), url);
             arrayOfFriends.add(thefriend);
+
+            /*
+                add top 10 friend name, so that the email can be automatically fill with top 10 friend name
+             */
+            if (sortedFriends.size() <= 10){
+                if ( alg == algorithm.firstOrder && top10_name_first.size() < sortedFriends.size()){
+                    top10_name_first.add(name);
+                }
+                else if( alg == algorithm.secondOrder && top10_name_second.size() < sortedFriends.size()){
+                    top10_name_second.add(name);
+                }
+            }
+            else if (sortedFriends.size() > 10){
+                if ( alg == algorithm.firstOrder && top10_name_first.size() < limit){
+                    top10_name_first.add(name);
+                }
+                else if( alg == algorithm.secondOrder && top10_name_second.size() < limit){
+                    top10_name_second.add(name);
+                }
+            }
+
         }
         /*
         for (Map.Entry<String, Double> entry : friends.entrySet())
@@ -691,7 +728,7 @@ public class ListViewFragment extends Fragment {
             arrayOfFriends.add(thefriend);
         }
         */
-
+        Log.d(TAG, " " + top10_name_first);
         myAdapter =  new MyAdapter(getActivity(), arrayOfFriends);
         theListView.setAdapter(myAdapter);
 
@@ -866,6 +903,9 @@ public class ListViewFragment extends Fragment {
 
                                     //store all people coordinates appeared in one photo
                                     people_coordinates.add(xy);
+
+                                    //counting total tags
+                                    total_tag ++;
 
                                     // counting photos that user was in it
                                     if (name.equals(hostUserName))
@@ -1308,6 +1348,7 @@ public class ListViewFragment extends Fragment {
                 total_photos = 0;
                 total_tagged_photos = 0;
                 photos_of_user = 0;
+                total_tag = 0;
 
                 Session session = Session.getActiveSession();
 
@@ -1381,6 +1422,10 @@ public class ListViewFragment extends Fragment {
                     total_photos = 0;
                     total_tagged_photos = 0;
                     photos_of_user = 0;
+                    total_tag = 0;
+                    alg = algorithm.firstOrder;
+                    top10_name_first.clear();
+                    top10_name_second.clear();
 
                     theListView.setAdapter(null);
                 }
@@ -1402,8 +1447,8 @@ public class ListViewFragment extends Fragment {
 
         Bundle params = new Bundle();
         params.putString("name", "Social Relationships");
-        params.putString("caption", "Please comment the accuracy for algorithm of First order and Second Order e.g. Accurate, Average, Inaccurate");
-        params.putString("description", "Exploring you and your friends social relationships based on facebook tagged photos.");
+        params.putString("caption", "Please send us feedback, Thank you");
+        params.putString("description", "Exploring you and your friends social relationships based on facebook tagged photos by two types of algorithms: First order and Second order.");
         params.putString("link", "https://play.google.com/store/apps/details?id=com.mengproject.jxy.socialrelationships&hl=en");
         params.putString("picture", "https://raw.github.com/fbsamples/ios-3.x-howtos/master/Images/iossdk_logo.png");
 
@@ -1457,11 +1502,50 @@ public class ListViewFragment extends Fragment {
         /* Create the Intent */
         final Intent emailIntent = new Intent(android.content.Intent.ACTION_SEND);
 
+        String first_order_name = "First order:\n";
+        String second_order_name = "Second order:\n";
+
+        if (top10_name_first != null){
+
+            for (String str : top10_name_first){
+                first_order_name += str + "\n";
+            }
+        }
+
+        if (top10_name_second != null){
+            for (String str : top10_name_second){
+                second_order_name += str + "\n";
+            }
+        }
+
+        String questions =  "Total number of photos: " + total_photos + "\n"+
+                            "Total number of tags: " + total_tag + "\n" +
+                            "Total number of photos with more than two tags: " + total_tagged_photos + "\n" +
+                            "Total number of photos with more than two tags and tagged on YOU: " + photos_of_user + "\n" +
+                            "---------------------------------------------------------" + "\n" +
+                            "1. How many of the 10 names shown are your close personal connections?" + "\n" +
+                            "First order: " + "\n" +
+                            "Second order: "+ "\n\n" +
+                            "2. How many close personal connections are missing from this list?" + "\n" +
+                            "First order: " + "\n" +
+                            "Second order: "+ "\n\n" +
+                            "3. Here is your friends list of calculated order, please rank this calculated order by number based on your real case:" + "\n" +
+                            "e.g." + "\n" +
+                            "Sample 2" + "\n" +
+                            "Sample 4" + "\n" +
+                            "Sample 6" + "\n" +
+                            "Sample 1" + "\n" +
+                            "..." + "\n\n" +
+                            "Please rank your friends list:" + "\n" +
+                            "";
+
+        String feedback = questions + first_order_name + "\n" + second_order_name;
+
         /* Fill it with Data */
         emailIntent.setType("plain/text");
         emailIntent.putExtra(Intent.EXTRA_EMAIL, new String[]{"jiangxiaoyong904@gmail.com"});
-        emailIntent.putExtra(Intent.EXTRA_SUBJECT, "Subject");
-        emailIntent.putExtra(Intent.EXTRA_TEXT, "Text");
+        emailIntent.putExtra(Intent.EXTRA_SUBJECT, "Feedback");
+        emailIntent.putExtra(Intent.EXTRA_TEXT, feedback );
 
         /* Send it off to the Activity-Chooser */
         startActivity(Intent.createChooser(emailIntent, "Send mail..."));
