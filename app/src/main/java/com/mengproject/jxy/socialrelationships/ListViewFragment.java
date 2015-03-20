@@ -1529,16 +1529,16 @@ public class ListViewFragment extends Fragment {
                             "2. How many close personal connections are missing from this list?" + "\n" +
                             "First order: " + "\n" +
                             "Second order: "+ "\n\n" +
-                            "3. Here is your friends list of calculated order, please rank this calculated order by number based on your real case:" + "\n" +
+                            "3. Please rank your friends list by putting a number beside the name based on your real case:" + "\n" +
                             "e.g." + "\n" +
-                            "Sample 2" + "\n" +
-                            "Sample 4" + "\n" +
-                            "Sample 6" + "\n" +
-                            "Sample 1" + "\n" +
+                            "Bob 2" + "\n" +
+                            "Mike 4" + "\n" +
+                            "Joe 6" + "\n" +
+                            "Peter 1" + "\n" +
                             "..." + "\n\n" +
                             "Please rank your friends list:" + "\n" +
                             "";
-
+        
         String feedback = questions + first_order_name + "\n" + second_order_name;
 
         /* Fill it with Data */
