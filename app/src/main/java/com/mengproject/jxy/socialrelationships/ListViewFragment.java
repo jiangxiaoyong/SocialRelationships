@@ -1538,7 +1538,7 @@ public class ListViewFragment extends Fragment {
                             "..." + "\n\n" +
                             "Please rank your friends list:" + "\n" +
                             "";
-        
+
         String feedback = questions + first_order_name + "\n" + second_order_name;
 
         /* Fill it with Data */
