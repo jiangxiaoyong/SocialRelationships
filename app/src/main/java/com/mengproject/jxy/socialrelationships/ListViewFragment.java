@@ -91,6 +91,7 @@ public class ListViewFragment extends Fragment {
     List<String> all_names = null;    //Array list to store the name of all people appeared in all photos
     List<String> all_scanned_photos = null;
     List<String> all_photos = null;
+    List<String> top10_name_zero = null;
     List<String> top10_name_first = null;
     List<String> top10_name_second = null;
     Map<String, Map<String, Double>> all_friends_relativity = null;
@@ -100,8 +101,12 @@ public class ListViewFragment extends Fragment {
     ArrayAdapter<Friend> myAdapter;
     ProgressBar progressBar = null;
 
+    Map<String, Map<String, Double>> FO_summation_relativity = null;
     Map<String, Map<String, Double>> SO_all_friends_relativity = null;
 
+    /*--------------------      Zero order variable  --------------------------------*/
+    TreeMap<String, Map<String, Double>> ZO_summation_relativity = null;
+    /* -------------------------------------------------------------------------*/
 
     boolean photosOfYouDone = false; // indicate that all pages of album 'Photos of you' have been fetched
     boolean uploadedPhotosDone = false; // indicate that all pages of all user uploaded photos have been fetched
@@ -135,7 +140,7 @@ public class ListViewFragment extends Fragment {
     }
 
     public enum algorithm {
-        firstOrder, secondOrder
+        zeroOrder, firstOrder, secondOrder
     }
 
     @Override
@@ -352,6 +357,12 @@ public class ListViewFragment extends Fragment {
         all_photos_cooridinates = new ArrayList<List<CoordinateOfOneTag>>();
         taggable_friends = new HashMap<String, String>();
 
+        /*
+            initialize Zero order variable
+         */
+
+        ZO_summation_relativity = new TreeMap<String, Map<String, Double>>(String.CASE_INSENSITIVE_ORDER);
+
         makeRelationshipRequest(session,"me/photos/uploaded/", null, photoCategory.uploadedPhotos );
         makeRelationshipRequest(session,"me/photos/", null, photoCategory.photosOfYou);
 
@@ -553,6 +564,7 @@ public class ListViewFragment extends Fragment {
                 summation of relativity between two tags of all photos
              */
             Map<String, Map<String, Double>> summation_relativity = summationOfRelativity(all_names, relativity_AllPhotos);
+            FO_summation_relativity = summation_relativity;
             return summation_relativity;
         }
 
@@ -678,6 +690,11 @@ public class ListViewFragment extends Fragment {
         if (top10_name_second == null){
             top10_name_second = new ArrayList<String>();
         }
+
+        if (top10_name_zero == null){
+            top10_name_zero = new ArrayList<String>();
+        }
+
         int limit = 10; // this limit the number of storing friends name to top 10
 
         /*
@@ -707,6 +724,9 @@ public class ListViewFragment extends Fragment {
                 else if( alg == algorithm.secondOrder && top10_name_second.size() < sortedFriends.size()){
                     top10_name_second.add(name);
                 }
+                else if( alg == algorithm.zeroOrder && top10_name_zero.size() < sortedFriends.size()){
+                    top10_name_zero.add(name);
+                }
             }
             else if (sortedFriends.size() > 10){
                 if ( alg == algorithm.firstOrder && top10_name_first.size() < limit){
@@ -714,6 +734,9 @@ public class ListViewFragment extends Fragment {
                 }
                 else if( alg == algorithm.secondOrder && top10_name_second.size() < limit){
                     top10_name_second.add(name);
+                }
+                else if( alg == algorithm.zeroOrder && top10_name_zero.size() < limit){
+                    top10_name_zero.add(name);
                 }
             }
 
@@ -988,19 +1011,20 @@ public class ListViewFragment extends Fragment {
             }
 
             //take summation of relativity of all possible two-tags
-
-            Map<String, Double> summationResult = takeSummation(nameToFind, target_relativity);
+            Map<String, Double> ZO_sum_of_relativity = new TreeMap<String, Double>(String.CASE_INSENSITIVE_ORDER);
+            Map<String, Double> summationResult = takeSummation(nameToFind, target_relativity,ZO_sum_of_relativity);
 
 
 
             summation_relativity.put(nameToFind, summationResult);
+            ZO_summation_relativity.put(nameToFind,ZO_sum_of_relativity);
 
         }
 
         return summation_relativity;
     }
 
-    private Map<String, Double> takeSummation(String nameToFind, List<RelativityOfTwoTags> target_relativity)
+    private Map<String, Double> takeSummation(String nameToFind, List<RelativityOfTwoTags> target_relativity,Map<String, Double>ZO_sum_of_relativity )
     {
         Map<String, Double> sum_of_relativity = new TreeMap<String, Double>(String.CASE_INSENSITIVE_ORDER);
 
@@ -1013,6 +1037,7 @@ public class ListViewFragment extends Fragment {
             String [] temp_name = name_twoTags.split(",",0);
 
             Double sumRelativity = 0.0;
+            Double ZO_counter = 0.0;
             String friendName0 = null;
 
             friendName0 = findFriendName(nameToFind,temp_name);
@@ -1035,11 +1060,16 @@ public class ListViewFragment extends Fragment {
                     if (friendName0.equalsIgnoreCase(friendName1))
                     {
                         sumRelativity += search_itr.getNormalizedValue().doubleValue();
+                        /*
+                            increase zero order counter when find two people names appear in different photos
+                         */
+                        ZO_counter ++ ;
                     }
                 }
 
 
                 sum_of_relativity.put(friendName0, sumRelativity);
+                ZO_sum_of_relativity.put(friendName0, ZO_counter);
             }
 
         }
@@ -1328,7 +1358,33 @@ public class ListViewFragment extends Fragment {
 
         int id = item.getItemId();
 
-        if (id == R.id.action_one) {
+        if (id == R.id.action_zero){
+
+            /*
+                show relativity of Zero order
+             */
+            if (alg != algorithm.zeroOrder){
+
+                progressBar.setVisibility(View.VISIBLE);
+                theListView.setAdapter(null);
+
+
+                if(SO_all_friends_relativity != null)
+                {
+                    SO_all_friends_relativity.clear();
+                }
+
+                alg = algorithm.zeroOrder;
+                zeroOrderRelativity();
+
+                current_alg.setText("Algo : Zero Order");
+
+
+
+
+            }
+        }
+        else if (id == R.id.action_one) {
 
             if(alg != algorithm.firstOrder){
 
@@ -1342,6 +1398,7 @@ public class ListViewFragment extends Fragment {
                 all_photos_cooridinates.clear();
                 all_friends_relativity.clear();
                 sortedFriends.clear();
+                ZO_summation_relativity.clear();
                 photosOfYouDone = false;
                 uploadedPhotosDone = false;
                 response_have_photo_data = false;
@@ -1372,6 +1429,8 @@ public class ListViewFragment extends Fragment {
                 progressBar.setVisibility(View.VISIBLE);
                 theListView.setAdapter(null);
 
+
+                ListViewFragment.this.all_friends_relativity = FO_summation_relativity;
                 secondOrderRelativity();
 
                 alg = algorithm.secondOrder;
@@ -1415,6 +1474,7 @@ public class ListViewFragment extends Fragment {
                     all_photos.clear();
                     all_photos_cooridinates.clear();
                     all_friends_relativity.clear();
+                    ZO_summation_relativity.clear();
                     sortedFriends.clear();
                     photosOfYouDone = false;
                     uploadedPhotosDone = false;
@@ -1426,6 +1486,7 @@ public class ListViewFragment extends Fragment {
                     alg = algorithm.firstOrder;
                     top10_name_first.clear();
                     top10_name_second.clear();
+                    top10_name_zero.clear();
 
                     theListView.setAdapter(null);
                 }
@@ -1502,8 +1563,16 @@ public class ListViewFragment extends Fragment {
         /* Create the Intent */
         final Intent emailIntent = new Intent(android.content.Intent.ACTION_SEND);
 
+        String zero_order_name = "Zero order:\n";
         String first_order_name = "First order:\n";
         String second_order_name = "Second order:\n";
+
+        if (top10_name_zero != null){
+
+            for (String str : top10_name_zero){
+                zero_order_name += str + "\n";
+            }
+        }
 
         if (top10_name_first != null){
 
@@ -1524,11 +1593,11 @@ public class ListViewFragment extends Fragment {
                             "Total number of photos with more than two tags and tagged on YOU: " + photos_of_user + "\n" +
                             "---------------------------------------------------------" + "\n" +
                             "1. How many of the 10 names shown are your close personal connections?" + "\n" +
-                            "First order: " + "\n" +
-                            "Second order: "+ "\n\n" +
+                            "Zero order: "+ "\n" +
+                            "First order: "+ "\n\n" +
                             "2. How many close personal connections are missing from this list?" + "\n" +
-                            "First order: " + "\n" +
-                            "Second order: "+ "\n\n" +
+                            "Zero order: "+ "\n" +
+                            "First order: "+ "\n\n" +
                             "3. Please rank your friends list by putting a number beside the name based on your real case:" + "\n" +
                             "e.g." + "\n" +
                             "Bob 2" + "\n" +
@@ -1539,7 +1608,7 @@ public class ListViewFragment extends Fragment {
                             "Please rank your friends list:" + "\n" +
                             "";
 
-        String feedback = questions + first_order_name + "\n" + second_order_name;
+        String feedback = questions + zero_order_name + "\n"+ first_order_name + "\n";
 
         /* Fill it with Data */
         emailIntent.setType("plain/text");
@@ -1553,6 +1622,21 @@ public class ListViewFragment extends Fragment {
 
     /*********************************************************************************************************
 
+     Code Below deal with Zero order relationships
+
+     *********************************************************************************************************/
+
+    private void zeroOrderRelativity() {
+
+        showResults(ZO_summation_relativity);
+
+    }
+
+
+
+
+    /*********************************************************************************************************
+
         Code Below deal with second order relationships
 
      *********************************************************************************************************/
@@ -1560,7 +1644,6 @@ public class ListViewFragment extends Fragment {
     private void secondOrderRelativity() {
 
         //constructSeondOrderGraph();
-
 
         new SecondOrderAsync().execute();
 
@@ -1642,6 +1725,7 @@ public class ListViewFragment extends Fragment {
 
             //record new second order relativity for all people
             SO_all_friends_relativity.put(current_name, SO_treemap_one_friend);
+            Log.d(TAG, "");
 
         }
 
